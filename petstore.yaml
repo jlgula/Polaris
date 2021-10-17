@@ -1,9 +1,9 @@
 openapi: 3.0.0
 servers:
-  - url: http://petstore.swagger.io/v1
+  - url: http://localhost:8080/v1
 info:
-  version: ""
-  title: ""
+  version: 1.0.0
+  title: "GuardRailPetStore"
 paths:
   /pet/{name}:
     put:
@@ -19,58 +19,86 @@ paths:
         content:
           application/json:
             schema:
-                $ref: "#!/components/schemas/Pet"
+              $ref: "#/components/schemas/Pet"
       responses:
         "200":
-          description: ""
+          description: "Update successful"
           content:
             "multipart/form-data":
               schema:
-                $ref: "#!/components/schemas/Pet"
+                $ref: "#/components/schemas/Pet"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+
   /pets:
+    get:
+      tags:
+        - pet
+      summary: List all pets
+      description: Gets a list of all known pets
+      operationId: getPets
+      x-scala-package: pet
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Pet'
+        '400':
+          description: Invalid status value
     post:
       operationId: createPet
       x-scala-package: pet
       requestBody:
         required: true
         content:
-          application/x-www-form-urlencoded:
+          #          application/x-www-form-urlencoded:
+          #            schema:
+          #              properties:
+          #                name:
+          #                  type: string
+          #                status:
+          #                  type: string
+          #              required:
+          #                - name
+          #          multipart/form-data:
+          #            schema:
+          #              properties:
+          #                name:
+          #                  type: string
+          #                status:
+          #                  type: string
+          #                file:
+          #                  type: string
+          #                  format: binary
+          #              required:
+          #                - name
+          application/json:
             schema:
-              properties:
-                name:
-                  type: string
-                status:
-                  type: string
-              required:
-                - name
-#          multipart/form-data:
-#            schema:
-#              properties:
-#                name:
-#                  type: string
-#                status:
-#                  type: string
-#                file:
-#                  type: string
-#                  format: binary
-#              required:
-#                - name
-#          application/json:
-#            schema:
-#              $ref: "#!/components/schemas/Pet"
+              $ref: "#/components/schemas/Pet"
       responses:
         "200":
-          description: ""
+          description: "Pet successfully added"
           content:
             "*/*":
               schema:
-                $ref: "#!/components/schemas/Pet"
+                $ref: "#/components/schemas/Pet"
 components:
   schemas:
     Pet:
       type: object
       required:
-      - name
+        - name
       properties:
         name:
           type: string
