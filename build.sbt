@@ -1,5 +1,5 @@
 Compile / guardrailTasks := List(
-  ScalaServer(file("polaris.yaml"), pkg="foo"),
+  ScalaServer(file("polaris.yaml"), pkg="org.opendcgrid.app.polaris"),
 )
 
 val akkaVersion       = "2.6.15"

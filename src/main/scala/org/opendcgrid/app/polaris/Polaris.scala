@@ -1,17 +1,18 @@
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent._
-import scala.concurrent.duration.Duration
+package org.opendcgrid.app.polaris
+
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.ContentType
-import foo.pet._
-import foo.definitions.Pet
+import org.opendcgrid.app.polaris.definitions.Pet
+import org.opendcgrid.app.polaris.pet.{PetHandler, PetResource}
 import io.circe.Json
 
 import java.io.File
 import scala.collection.mutable
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, Future}
 
-object App extends App {
+object Polaris extends App {
   private val pets = mutable.HashMap[String, Option[String]]()
 
   implicit def actorSystem = ActorSystem()
@@ -19,12 +20,14 @@ object App extends App {
   val routes = PetResource.routes(new PetHandler {
     // application/x-www-form-urlencoded
     def createPet(respond: PetResource.CreatePetResponse.type)(name: String, status: Option[String]): scala.concurrent.Future[PetResource.CreatePetResponse] = {
-      Future.successful(respond.OK(Pet(name=name, status=status)))
+      Future.successful(respond.OK(Pet(name = name, status = status)))
     }
+
     // multipart/form-data
     def createPet(respond: PetResource.CreatePetResponse.type)(name: String, status: Option[String], file: Option[(java.io.File, Option[String], ContentType)]): scala.concurrent.Future[PetResource.CreatePetResponse] = {
-      Future.successful(respond.OK(Pet(name=name, status=status)))
+      Future.successful(respond.OK(Pet(name = name, status = status)))
     }
+
     def createPetMapFileField(fieldName: String, fileName: Option[String], contentType: ContentType): File = ???
 
     // application/json
