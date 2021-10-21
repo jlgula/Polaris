@@ -1,5 +1,5 @@
 Compile / guardrailTasks := List(
-  ScalaServer(file("petstore.yaml"), pkg="foo"),
+  ScalaServer(file("polaris.yaml"), pkg="foo"),
 )
 
 val akkaVersion       = "2.6.15"
