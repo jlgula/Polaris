@@ -1,14 +1,25 @@
 openapi: 3.0.0
 servers:
   - url: http://localhost:8080/v1
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/jlgula/Polaris/1.0.0
 info:
   version: 1.0.0
-  title: "GuardRailPetStore"
+  title: "Polaris"
+  description: "Microgrid controller"
+  contact:
+    email: jlgula@papugh.com
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+tags:
+  - name: device
+    description: "Devices managed by the controller"
 paths:
   /pet/{name}:
     put:
       operationId: updatePet
-      x-scala-package: pet
+#      x-scala-package: pet
       parameters:
         - name: name
           in: path
@@ -44,7 +55,7 @@ paths:
       summary: List all pets
       description: Gets a list of all known pets
       operationId: getPets
-      x-scala-package: pet
+#      x-scala-package: pet
       responses:
         '200':
           description: successful operation
@@ -58,7 +69,7 @@ paths:
           description: Invalid status value
     post:
       operationId: createPet
-      x-scala-package: pet
+#      x-scala-package: pet
       requestBody:
         required: true
         content:
@@ -93,6 +104,117 @@ paths:
             "*/*":
               schema:
                 $ref: "#/components/schemas/Pet"
+  /devices:
+    get:
+      tags:
+        - device
+      summary: Lists devices
+      description: Gets a list of all known devices
+      operationId: listDevices
+#      x-scala-package: org.opendcgrid.app.polaris
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Device'
+        '400':
+          description: Invalid status value
+    post:
+      tags:
+        - device
+      summary: Adds a device
+      description: Adds a new device to the list of all known devices
+      operationId: addDevice
+#      x-scala-package: org.opendcgrid.app.polaris
+      requestBody:
+        required: true
+        content:
+          #          application/x-www-form-urlencoded:
+          #            schema:
+          #              properties:
+          #                name:
+          #                  type: string
+          #                status:
+          #                  type: string
+          #              required:
+          #                - name
+          #          multipart/form-data:
+          #            schema:
+          #              properties:
+          #                name:
+          #                  type: string
+          #                status:
+          #                  type: string
+          #                file:
+          #                  type: string
+          #                  format: binary
+          #              required:
+          #                - name
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Device"
+      responses:
+        "201":
+          description: "Device successfully added"
+          content:
+            "*/*":
+              schema:
+                $ref: "#/components/schemas/Device"
+  /devices/{id}:
+    get:
+      tags:
+        - device
+      operationId: getDevice
+#      x-scala-package: org.opendcgrid.app.polaris
+      parameters:
+        - name: id
+          in: path
+          schema:
+            type: string
+          required: true
+      responses:
+        "200":
+          description: "Get successful"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Device"
+    put:
+      tags:
+        - device
+      operationId: updateDevice
+#      x-scala-package: org.opendcgrid.app.polaris
+      parameters:
+        - name: id
+          in: path
+          schema:
+            type: string
+          required: true
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Device"
+      responses:
+        "200":
+          description: "Update successful"
+          content:
+            "multipart/form-data":
+              schema:
+                $ref: "#/components/schemas/Device"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
 components:
   schemas:
     Pet:
@@ -103,4 +225,14 @@ components:
         name:
           type: string
         status:
+          type: string
+    Device:
+      type: object
+      required:
+        - name
+        - id
+      properties:
+        id:
+          type: string
+        name:
           type: string

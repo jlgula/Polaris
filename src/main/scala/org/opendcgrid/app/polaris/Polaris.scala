@@ -3,9 +3,10 @@ package org.opendcgrid.app.polaris
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.ContentType
-import org.opendcgrid.app.polaris.definitions.Pet
+import org.opendcgrid.app.polaris.definitions.{Device, Pet}
 import org.opendcgrid.app.polaris.pet.{PetHandler, PetResource}
 import io.circe.Json
+import org.opendcgrid.app.polaris.device.{DeviceHandler, DeviceResource}
 
 import java.io.File
 import scala.collection.mutable
@@ -13,10 +14,10 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 
 object Polaris extends App {
-  private val pets = mutable.HashMap[String, Option[String]]()
+  private val devices = mutable.HashMap[String, Device]()
 
   implicit def actorSystem = ActorSystem()
-
+/*
   val routes = PetResource.routes(new PetHandler {
     // application/x-www-form-urlencoded
     def createPet(respond: PetResource.CreatePetResponse.type)(name: String, status: Option[String]): scala.concurrent.Future[PetResource.CreatePetResponse] = {
@@ -47,6 +48,27 @@ object Polaris extends App {
     override def getPets(respond: PetResource.GetPetsResponse.type)(): Future[PetResource.GetPetsResponse] = {
       println("getPets")
       Future.successful(respond.OK(pets.keys.map(key => Pet(key, pets(key))).toVector))
+    }
+  })
+
+ */
+
+  val routes = DeviceResource.routes(new DeviceHandler {
+    override def addDevice(respond: DeviceResource.AddDeviceResponse.type)(body: Device): Future[DeviceResource.AddDeviceResponse] = {
+      devices.put(body.id, body)
+      Future.successful(respond.Created(body))
+    }
+
+    override def listDevices(respond: DeviceResource.ListDevicesResponse.type)(): Future[DeviceResource.ListDevicesResponse] = {
+      Future.successful(respond.OK(devices.values.toVector))
+    }
+
+    override def getDevice(respond: DeviceResource.GetDeviceResponse.type)(id: String): Future[DeviceResource.GetDeviceResponse] = {
+      Future.successful(respond.OK(devices(id)))
+    }
+
+    override def updateDevice(respond: DeviceResource.UpdateDeviceResponse.type)(id: String, body: Option[Device]): Future[DeviceResource.UpdateDeviceResponse] = {
+      Future.successful(respond.OK(body.get))
     }
   })
 
