@@ -115,7 +115,7 @@ paths:
         "200":
           description: "Update successful"
           content:
-            "multipart/form-data":
+            application/json:
               schema:
                 $ref: "#/components/schemas/Device"
         "400":
