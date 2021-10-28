@@ -1,41 +1,72 @@
 package org.opendcgrid.app.polaris.device
 
-import akka.http.scaladsl.model.HttpResponse
+import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
+import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.ScalatestRouteTest
-import akka.http.scaladsl.unmarshalling.{Unmarshal, Unmarshaller}
-import akka.stream.Materializer
-import org.opendcgrid.app.pclient.device.ListDevicesResponse
-import org.scalatest.funsuite.AnyFunSuite
-import org.opendcgrid.app.polaris.definitions.Device
 
-import scala.concurrent.{ExecutionContext, Future}
+import org.opendcgrid.app.pclient.definitions.{Device => ClientDevice}
+import org.opendcgrid.app.pclient.device.{AddDeviceResponse, DeviceClient, GetDeviceResponse, ListDevicesResponse}
+
+import org.scalatest.funsuite.AnyFunSuite
+
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration.Duration
 
 class PolarisDeviceHandlerTest extends AnyFunSuite with ScalatestRouteTest {
-  val routes = DeviceResource.routes(new PolarisDeviceHandler())
-  test("listDevices") {
-    type FromResponseUnmarshaller[T] = Unmarshaller[HttpResponse, T]
-    implicit val unmarshaller: FromResponseUnmarshaller[Vector[Device]] = new Unmarshaller[HttpResponse, Vector[Device]] {
-      override def apply(value: HttpResponse)(implicit ec: ExecutionContext, materializer: Materializer): Future[Vector[Device]] = Future.successful(Vector[Device]())
-    }//??? //Unmarshal(resp.entity).to[Vector[_root_.org.opendcgrid.app.pclient.definitions.Device]](listDevicesOKDecoder, implicitly, implicitly).map(x => Right(ListDevicesResponse.OK(x)))
-    Get("/v1/devices") -> routes -> check {
-      assertResult(Vector[Device]())(responseAs[Vector[Device]])
+  val routes: Route = DeviceResource.routes(new PolarisDeviceHandler())
+  implicit val routeFunction: HttpRequest => Future[HttpResponse] = Route.toFunction(routes)
+  val deviceClient: DeviceClient = DeviceClient()
+  /*
+   test("listDevices") {
+     type FromResponseUnmarshaller[T] = Unmarshaller[HttpResponse, T]
+     implicit val unmarshaller: FromResponseUnmarshaller[Vector[Device]] = new Unmarshaller[HttpResponse, Vector[Device]] {
+       override def apply(value: HttpResponse)(implicit ec: ExecutionContext, materializer: Materializer): Future[Vector[Device]] = Future.successful(Vector[Device]())
+     }
+     Get("/v1/devices") -> routes -> check {
+       assertResult(Vector[Device]())(responseAs[Vector[Device]])
+     }
     }
-    //implicit val system = ActorSystem()
-    // needed for the future flatMap/onComplete in the end
-    //implicit val executionContext = system.dispatcher
-    /*
-    val deviceHttpClient: HttpRequest => Future[HttpResponse] = Route.toFunction(routes)
-    val deviceClient: DeviceClient = DeviceClient.httpClient(deviceHttpClient)
-    //val getUserResponse: EitherT[Future, Either[Throwable, HttpResponse], Vector[Device]] = deviceClient.listDevices().map(_.fold(d => d))
-    val listDeviceResponse = deviceClient.listDevices().value
-    val x = Await.result(listDeviceResponse, Duration.Inf)
-    val yy = x.getOrElse(throw new IllegalStateException("failed"))
-    val devices = yy match {
-      case ListDevicesResponse.OK(value) => value
-      case ListDevicesResponse.BadRequest => throw new IllegalStateException("failed")
-    }
-    assert(devices.isEmpty)
 
-     */
+    */
+
+  test("listDevices") {
+    validateListDevices(Vector[ClientDevice]())
   }
+
+  test("addDevice") {
+    val device = ClientDevice("123", "test")
+    validateAddDevice(device)
+    validateListDevices(Vector(device))
+  }
+
+  test("getDevice") {
+    val device = ClientDevice("123", "test")
+    validateAddDevice(device)
+    val result2 = deviceClient.getDevice(device.id)
+    Await.result(result2.value, Duration.Inf) match {
+      case Right(GetDeviceResponse.OK(value)) => assertResult(device)(value)
+      case Left(Left(throwable)) => fail(s"Failed: ${throwable.getMessage}")
+      case Left(Right(response)) => fail(s"Failed: unexpected response $response")
+    }
+  }
+
+  def validateListDevices(expected: Vector[ClientDevice]): Unit = {
+    val result2 = deviceClient.listDevices()
+    Await.result(result2.value, Duration.Inf) match {
+      case Right(ListDevicesResponse.OK(value)) => assertResult(expected)(value)
+      case Right(ListDevicesResponse.BadRequest) => fail("Bad request.")
+      case Left(Left(throwable)) => fail(s"Failed: ${throwable.getMessage}")
+      case Left(Right(response)) => fail(s"Failed: unexpected response $response")
+    }
+  }
+
+  def validateAddDevice(device: ClientDevice): Unit = {
+    val result = deviceClient.addDevice(device)
+    Await.result(result.value, Duration.Inf) match {
+      case Right(AddDeviceResponse.Created(createdDevice)) => assertResult(device)(createdDevice)
+      case Left(Left(throwable)) => fail(s"Failed: ${throwable.getMessage}")
+      case Left(Right(response)) => fail(s"Failed: unexpected response $response")
+    }
+  }
+
 }
