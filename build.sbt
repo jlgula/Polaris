@@ -9,13 +9,17 @@ Compile / guardrailTasks := List(
   ScalaClient(file("polaris.yaml"), pkg="org.opendcgrid.app.pclient"),
 )
 
+val AkkaVersion = "2.6.15"
+val AkkaHTTPVersion = "10.2.4"
+
 libraryDependencies ++= Seq(
-  "com.typesafe.akka" %% "akka-actor"        % "2.6.15",
-  "com.typesafe.akka" %% "akka-actor-typed"  % "2.6.15",
-  "com.typesafe.akka" %% "akka-stream"       % "2.6.15",
-  "com.typesafe.akka" %% "akka-http"         % "10.2.4",
-  "com.typesafe.akka" %% "akka-actor-testkit-typed" % "2.6.15" % Test,
-  "com.typesafe.akka" %% "akka-http-testkit" % "10.2.4",
+  "com.typesafe.akka" %% "akka-actor"        % AkkaVersion,
+  "com.typesafe.akka" %% "akka-actor-typed"  % AkkaVersion,
+  "com.typesafe.akka" %% "akka-stream"       % AkkaVersion,
+  "com.typesafe.akka" %% "akka-testkit"      % AkkaVersion % Test,
+  "com.typesafe.akka" %% "akka-actor-testkit-typed" % AkkaVersion % Test,
+  "com.typesafe.akka" %% "akka-http"         % AkkaHTTPVersion,
+  "com.typesafe.akka" %% "akka-http-testkit" % AkkaHTTPVersion,
   "io.circe"          %% "circe-core"        % "0.14.1",
   "io.circe"          %% "circe-generic"     % "0.14.1",
   "io.circe"          %% "circe-parser"      % "0.14.1",
