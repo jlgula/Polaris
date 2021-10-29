@@ -11,12 +11,12 @@ on:
 
 jobs:
   core:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        java: [ '15' ]
+        java: [ '16' ]
         scala: [
-            { version: '2.12.12', bincompat: '2.12' }
+            { version: '2.13.6', bincompat: '2.13.6' }
           ]
     steps:
     - uses: actions/checkout@v2
