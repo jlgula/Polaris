@@ -4,7 +4,7 @@ import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import org.opendcgrid.app.pclient.definitions.{Device => ClientDevice}
-import org.opendcgrid.app.pclient.device.{AddDeviceResponse, DeviceClient, GetDeviceResponse, ListDevicesResponse, UpdateDeviceResponse}
+import org.opendcgrid.app.pclient.device.{AddDeviceResponse, DeviceClient, GetDeviceResponse, ListDevicesResponse, PutDeviceResponse}
 import org.scalatest.funsuite.AnyFunSuite
 
 import scala.concurrent.{Await, Future}
@@ -81,10 +81,10 @@ class PolarisDeviceHandlerTest extends AnyFunSuite with ScalatestRouteTest {
   }
 
   def validatePutDevice(updatedDevice: ClientDevice): Unit = {
-    val result2 = deviceClient.updateDevice(updatedDevice.id, updatedDevice)
+    val result2 = deviceClient.putDevice(updatedDevice.id, updatedDevice)
     Await.result(result2.value, Duration.Inf) match {
-      case Right(UpdateDeviceResponse.OK(value)) => assertResult(updatedDevice)(value)
-      case Right(UpdateDeviceResponse.BadRequest(value)) => fail(s"Failed - bad request: $value")
+      case Right(PutDeviceResponse.OK(value)) => assertResult(updatedDevice)(value)
+      case Right(PutDeviceResponse.BadRequest(value)) => fail(s"Failed - bad request: $value")
       case Left(Left(throwable)) => fail(s"Failed: ${throwable.getMessage}")
       case Left(Right(response)) => fail(s"Failed: unexpected response $response")
     }

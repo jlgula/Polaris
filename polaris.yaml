@@ -98,7 +98,7 @@ paths:
     put:
       tags:
         - device
-      operationId: updateDevice
+      operationId: putDevice
       x-scala-package: device
       parameters:
         - name: id
