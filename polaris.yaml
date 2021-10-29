@@ -113,12 +113,8 @@ paths:
             schema:
               $ref: "#/components/schemas/Device"
       responses:
-        "200":
-          description: "Update successful"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Device"
+        "204":
+          description: "Update successful, no content returned"
         "400":
           description: Invalid request
           content:

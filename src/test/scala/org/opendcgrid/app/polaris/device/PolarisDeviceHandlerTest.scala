@@ -83,7 +83,7 @@ class PolarisDeviceHandlerTest extends AnyFunSuite with ScalatestRouteTest {
   def validatePutDevice(updatedDevice: ClientDevice): Unit = {
     val result2 = deviceClient.putDevice(updatedDevice.id, updatedDevice)
     Await.result(result2.value, Duration.Inf) match {
-      case Right(PutDeviceResponse.OK(value)) => assertResult(updatedDevice)(value)
+      case Right(PutDeviceResponse.NoContent) => // Succeed
       case Right(PutDeviceResponse.BadRequest(value)) => fail(s"Failed - bad request: $value")
       case Left(Left(throwable)) => fail(s"Failed: ${throwable.getMessage}")
       case Left(Right(response)) => fail(s"Failed: unexpected response $response")
