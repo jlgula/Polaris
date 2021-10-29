@@ -4,7 +4,7 @@ import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import org.opendcgrid.app.pclient.definitions.{Device => ClientDevice}
-import org.opendcgrid.app.pclient.device.{AddDeviceResponse, DeviceClient, GetDeviceResponse, ListDevicesResponse, PutDeviceResponse}
+import org.opendcgrid.app.pclient.device.{AddDeviceResponse, DeviceClient, GetDeviceResponse, GetPowerGrantedResponse, ListDevicesResponse, PutDeviceResponse, PutPowerGrantedResponse}
 import org.scalatest.funsuite.AnyFunSuite
 
 import scala.concurrent.{Await, Future}
@@ -46,9 +46,30 @@ class PolarisDeviceHandlerTest extends AnyFunSuite with ScalatestRouteTest {
   test("putDevice") {
     val device = ClientDevice("123", "test")
     validateAddDevice(device)
-    val update = ClientDevice("123", "changed")
+    val update = ClientDevice("123", "changed", Some(10.0))
     validatePutDevice(update)
     validateGetDevice(device.id, update)
+  }
+
+  test("put/get PowerGranted") {
+    val device = ClientDevice("123", "test", Some(10.0))
+    validateAddDevice(device)
+    val powerGranted = BigDecimal(10.0)
+    val result = deviceClient.putPowerGranted(device.id, powerGranted)
+    Await.result(result.value, Duration.Inf) match {
+      case Right(PutPowerGrantedResponse.NoContent) => // Succeed
+      case Right(PutPowerGrantedResponse.BadRequest(value)) => fail(s"Failed - bad request: $value")
+      case Left(Left(throwable)) => fail(s"Failed: ${throwable.getMessage}")
+      case Left(Right(response)) => fail(s"Failed: unexpected response $response")
+    }
+    val result2 = deviceClient.getPowerGranted(device.id)
+    Await.result(result2.value, Duration.Inf) match {
+      case Right(GetPowerGrantedResponse.OK(value)) => assertResult(powerGranted)(value)
+      //case Right(GetPowerGrantedResponse.BadRequest(value)) => fail(s"Failed - bad request: $value")
+      case Left(Left(throwable)) => fail(s"Failed: ${throwable.getMessage}")
+      case Left(Right(response)) => fail(s"Failed: unexpected response $response")
+    }
+
   }
 
   def validateListDevices(expected: Vector[ClientDevice]): Unit = {
@@ -77,7 +98,6 @@ class PolarisDeviceHandlerTest extends AnyFunSuite with ScalatestRouteTest {
       case Left(Left(throwable)) => fail(s"Failed: ${throwable.getMessage}")
       case Left(Right(response)) => fail(s"Failed: unexpected response $response")
     }
-
   }
 
   def validatePutDevice(updatedDevice: ClientDevice): Unit = {

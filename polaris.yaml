@@ -124,6 +124,55 @@ paths:
                 properties:
                   message:
                     type: string
+  /devices/{id}/powerGranted:
+    get:
+      tags:
+        - device
+      operationId: getPowerGranted
+      x-scala-package: device
+      parameters:
+        - name: id
+          in: path
+          schema:
+            type: string
+          required: true
+      responses:
+        "200":
+          description: "Get successful"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PowerGranted"
+    put:
+      tags:
+        - device
+      operationId: putPowerGranted
+      x-scala-package: device
+      parameters:
+        - name: id
+          in: path
+          schema:
+            type: string
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PowerGranted"
+      responses:
+        "204":
+          description: "Update successful, no content returned"
+        "400":
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+
 components:
   schemas:
     Device:
@@ -136,3 +185,9 @@ components:
           type: string
         name:
           type: string
+        powerRequested:
+          type: number
+          description: the power that the device needs in watts to perform its primary function
+    PowerGranted:
+      description: the power that the device has been granted in watts
+      type: number
