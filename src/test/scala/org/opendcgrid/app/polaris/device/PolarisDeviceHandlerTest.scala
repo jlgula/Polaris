@@ -3,10 +3,8 @@ package org.opendcgrid.app.polaris.device
 import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.ScalatestRouteTest
-
 import org.opendcgrid.app.pclient.definitions.{Device => ClientDevice}
-import org.opendcgrid.app.pclient.device.{AddDeviceResponse, DeviceClient, GetDeviceResponse, ListDevicesResponse}
-
+import org.opendcgrid.app.pclient.device.{AddDeviceResponse, DeviceClient, GetDeviceResponse, ListDevicesResponse, UpdateDeviceResponse}
 import org.scalatest.funsuite.AnyFunSuite
 
 import scala.concurrent.{Await, Future}
@@ -42,12 +40,15 @@ class PolarisDeviceHandlerTest extends AnyFunSuite with ScalatestRouteTest {
   test("getDevice") {
     val device = ClientDevice("123", "test")
     validateAddDevice(device)
-    val result2 = deviceClient.getDevice(device.id)
-    Await.result(result2.value, Duration.Inf) match {
-      case Right(GetDeviceResponse.OK(value)) => assertResult(device)(value)
-      case Left(Left(throwable)) => fail(s"Failed: ${throwable.getMessage}")
-      case Left(Right(response)) => fail(s"Failed: unexpected response $response")
-    }
+    validateGetDevice(device.id, device)
+  }
+
+  test("putDevice") {
+    val device = ClientDevice("123", "test")
+    validateAddDevice(device)
+    val update = ClientDevice("123", "changed")
+    validatePutDevice(update)
+    validateGetDevice(device.id, update)
   }
 
   def validateListDevices(expected: Vector[ClientDevice]): Unit = {
@@ -64,6 +65,26 @@ class PolarisDeviceHandlerTest extends AnyFunSuite with ScalatestRouteTest {
     val result = deviceClient.addDevice(device)
     Await.result(result.value, Duration.Inf) match {
       case Right(AddDeviceResponse.Created(createdDevice)) => assertResult(device)(createdDevice)
+      case Left(Left(throwable)) => fail(s"Failed: ${throwable.getMessage}")
+      case Left(Right(response)) => fail(s"Failed: unexpected response $response")
+    }
+  }
+
+  def validateGetDevice(id: String, expected: ClientDevice): Unit = {
+    val result2 = deviceClient.getDevice(id)
+    Await.result(result2.value, Duration.Inf) match {
+      case Right(GetDeviceResponse.OK(value)) => assertResult(expected)(value)
+      case Left(Left(throwable)) => fail(s"Failed: ${throwable.getMessage}")
+      case Left(Right(response)) => fail(s"Failed: unexpected response $response")
+    }
+
+  }
+
+  def validatePutDevice(updatedDevice: ClientDevice): Unit = {
+    val result2 = deviceClient.updateDevice(updatedDevice.id, Some(updatedDevice))
+    Await.result(result2.value, Duration.Inf) match {
+      case Right(UpdateDeviceResponse.OK(value)) => assertResult(updatedDevice)(value)
+      case Right(UpdateDeviceResponse.BadRequest(value)) => fail(s"Failed - bad request: $value")
       case Left(Left(throwable)) => fail(s"Failed: ${throwable.getMessage}")
       case Left(Right(response)) => fail(s"Failed: unexpected response $response")
     }
