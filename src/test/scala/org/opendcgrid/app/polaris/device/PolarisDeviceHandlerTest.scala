@@ -81,7 +81,7 @@ class PolarisDeviceHandlerTest extends AnyFunSuite with ScalatestRouteTest {
   }
 
   def validatePutDevice(updatedDevice: ClientDevice): Unit = {
-    val result2 = deviceClient.updateDevice(updatedDevice.id, Some(updatedDevice))
+    val result2 = deviceClient.updateDevice(updatedDevice.id, updatedDevice)
     Await.result(result2.value, Duration.Inf) match {
       case Right(UpdateDeviceResponse.OK(value)) => assertResult(updatedDevice)(value)
       case Right(UpdateDeviceResponse.BadRequest(value)) => fail(s"Failed - bad request: $value")

@@ -20,8 +20,8 @@ class PolarisDeviceHandler extends DeviceHandler {
     Future.successful(respond.OK(devices(id)))
   }
 
-  override def updateDevice(respond: DeviceResource.UpdateDeviceResponse.type)(id: String, body: Option[Device]): Future[DeviceResource.UpdateDeviceResponse] = {
-    devices.put(id, body.get)
-    Future.successful(respond.OK(body.get))
+  override def updateDevice(respond: DeviceResource.UpdateDeviceResponse.type)(id: String, body: Device): Future[DeviceResource.UpdateDeviceResponse] = {
+    devices.put(id, body)
+    Future.successful(respond.OK(body))
   }
 }
