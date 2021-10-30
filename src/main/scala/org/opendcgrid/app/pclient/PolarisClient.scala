@@ -28,7 +28,6 @@ class PolarisClient(val host: String) {
 
     Await.result(result.value, Duration.Inf) match {
       case Right(ListDevicesResponse.OK(value)) => Success(value)
-      case Right(ListDevicesResponse.BadRequest) => Failure(new IllegalStateException(s"Bad request."))
       case Left(Left(throwable)) => Failure(throwable)
       case Left(Right(response)) => Failure(new IllegalStateException(s"Failed: unexpected response $response"))
     }

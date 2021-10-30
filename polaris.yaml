@@ -16,6 +16,21 @@ tags:
   - name: device
     description: "Devices managed by the controller"
 paths:
+  /devices/reset:
+    post:
+      tags:
+        - device
+      summary: Resets the GC
+      description: Removes all devices and resets the GC.
+      operationId: reset
+      x-scala-package: device
+      responses:
+        "201":
+          description: "Devices reset"
+          content:
+            text/plain:
+              schema:
+                type: string
   /devices:
     get:
       tags:
@@ -33,8 +48,6 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Device'
-        '400':
-          description: Invalid status value
     post:
       tags:
         - device
@@ -73,9 +86,15 @@ paths:
         "201":
           description: "Device successfully added"
           content:
-            "*/*":
+            text/plain:
               schema:
-                $ref: "#/components/schemas/Device"
+                type: string
+        "400":
+          description: Invalid request
+          content:
+            text/plain:
+              schema:
+                type: string
   /devices/{id}:
     get:
       tags:
@@ -95,6 +114,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Device"
+        "404":
+          description: Not found - the id does not corresponed to a registered device
+          content:
+            text/plain:
+              schema:
+                type: string
     put:
       tags:
         - device
@@ -118,12 +143,15 @@ paths:
         "400":
           description: Invalid request
           content:
-            application/json:
+            text/plain:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
+                type: string
+        "404":
+          description: Not found - the id does not corresponed to a registered device
+          content:
+            text/plain:
+              schema:
+                type: string
   /devices/{id}/powerGranted:
     get:
       tags:
@@ -143,6 +171,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/PowerGranted"
+        "404":
+          description: Not found - the id does not corresponed to a registered device
+          content:
+            text/plain:
+              schema:
+                type: string
     put:
       tags:
         - device
@@ -166,12 +200,15 @@ paths:
         "400":
           description: Invalid request
           content:
-            application/json:
+            text/plain:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
+                type: string
+        "404":
+          description: Not found - the id does not corresponed to a registered device
+          content:
+            text/plain:
+              schema:
+                type: string
 
 components:
   schemas:
