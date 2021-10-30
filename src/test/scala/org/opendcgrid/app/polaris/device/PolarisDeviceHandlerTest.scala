@@ -1,19 +1,29 @@
 package org.opendcgrid.app.polaris.device
 
 import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
+import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import org.opendcgrid.app.pclient.definitions.{Device => ClientDevice}
-import org.opendcgrid.app.pclient.device.{AddDeviceResponse, DeviceClient, GetDeviceResponse, GetPowerGrantedResponse, ListDevicesResponse, PutDeviceResponse, PutPowerGrantedResponse, ResetResponse}
+import org.opendcgrid.app.pclient.device.{AddDeviceResponse, DeviceClient, GetDeviceResponse, GetPowerGrantedResponse, ListDevicesResponse, PutDeviceResponse, PutPowerGrantedResponse}
+import org.opendcgrid.app.pclient.gc.{GcClient, ResetResponse}
+import org.opendcgrid.app.polaris.gc.{GcResource, PolarisGCHandler}
+import org.opendcgrid.app.polaris.subscription.PolarisSubscriptionHandler
 import org.scalatest.funsuite.AnyFunSuite
 
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.Duration
 
 class PolarisDeviceHandlerTest extends AnyFunSuite with ScalatestRouteTest {
-  val routes: Route = DeviceResource.routes(new PolarisDeviceHandler())
+  private val subscriptionHandler = new PolarisSubscriptionHandler()
+  private val deviceHandler = new PolarisDeviceHandler(subscriptionHandler)
+  private val deviceRoutes = DeviceResource.routes(deviceHandler)
+  private val gcRoutes = GcResource.routes(new PolarisGCHandler(deviceHandler, subscriptionHandler))
+  private val routes = deviceRoutes ~ gcRoutes
+
   implicit val routeFunction: HttpRequest => Future[HttpResponse] = Route.toFunction(routes)
-  val deviceClient: DeviceClient = DeviceClient()
+  private val deviceClient = DeviceClient()
+  private val gcClient = GcClient()
   /*
    test("listDevices") {
      type FromResponseUnmarshaller[T] = Unmarshaller[HttpResponse, T]
@@ -85,7 +95,7 @@ class PolarisDeviceHandlerTest extends AnyFunSuite with ScalatestRouteTest {
   }
 
   def validateReset(): Unit = {
-    val result2 = deviceClient.reset()
+    val result2 = gcClient.reset()
     Await.result(result2.value, Duration.Inf) match {
       case Right(ResetResponse.Created(_)) => // Succeed
       case other => fail(s"unexpected response: $other")
@@ -96,8 +106,7 @@ class PolarisDeviceHandlerTest extends AnyFunSuite with ScalatestRouteTest {
     val result2 = deviceClient.listDevices()
     Await.result(result2.value, Duration.Inf) match {
       case Right(ListDevicesResponse.OK(value)) => assertResult(expected)(value)
-      case Left(Left(throwable)) => fail(s"Failed: ${throwable.getMessage}")
-      case Left(Right(response)) => fail(s"Failed: unexpected response $response")
+      case other => fail(s"unexpected response: $other")
     }
   }
 
@@ -105,8 +114,7 @@ class PolarisDeviceHandlerTest extends AnyFunSuite with ScalatestRouteTest {
     val result = deviceClient.addDevice(device)
     Await.result(result.value, Duration.Inf) match {
       case Right(AddDeviceResponse.Created(location)) => assertResult(device.id)(location)
-      case Left(Left(throwable)) => fail(s"Failed: ${throwable.getMessage}")
-      case Left(Right(response)) => fail(s"Failed: unexpected response $response")
+      case other => fail(s"unexpected response: $other")
     }
   }
 
@@ -125,5 +133,4 @@ class PolarisDeviceHandlerTest extends AnyFunSuite with ScalatestRouteTest {
       case other => fail(s"unexpected response: $other")
     }
   }
-
 }

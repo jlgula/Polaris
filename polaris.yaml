@@ -5,8 +5,8 @@ servers:
     url: https://virtserver.swaggerhub.com/jlgula/Polaris/1.0.0
 info:
   version: 1.0.0
-  title: "Polaris"
-  description: "Microgrid controller"
+  title: Polaris
+  description: Microgrid controller
   contact:
     email: jlgula@papugh.com
   license:
@@ -14,19 +14,23 @@ info:
     url: http://www.apache.org/licenses/LICENSE-2.0.html
 tags:
   - name: device
-    description: "Devices managed by the controller"
+    description: Devices managed by the controller
+  - name: subscription
+    description: Subscriptions that implement subscribe/notify
+  - name: GC
+    description: Operations the affect the grid controller as a whole.
 paths:
-  /devices/reset:
+  /gc/reset:
     post:
       tags:
-        - device
+        - GC
       summary: Resets the GC
-      description: Removes all devices and resets the GC.
+      description: Removes all content and resets the GC.
       operationId: reset
-      x-scala-package: device
+      x-scala-package: gc
       responses:
         "201":
-          description: "Devices reset"
+          description: Reset successful
           content:
             text/plain:
               schema:
@@ -58,33 +62,12 @@ paths:
       requestBody:
         required: true
         content:
-          #          application/x-www-form-urlencoded:
-          #            schema:
-          #              properties:
-          #                name:
-          #                  type: string
-          #                status:
-          #                  type: string
-          #              required:
-          #                - name
-          #          multipart/form-data:
-          #            schema:
-          #              properties:
-          #                name:
-          #                  type: string
-          #                status:
-          #                  type: string
-          #                file:
-          #                  type: string
-          #                  format: binary
-          #              required:
-          #                - name
           application/json:
             schema:
               $ref: "#/components/schemas/Device"
       responses:
         "201":
-          description: "Device successfully added"
+          description: Device successfully added. The content is the ID of the added device.
           content:
             text/plain:
               schema:
@@ -109,7 +92,7 @@ paths:
           required: true
       responses:
         "200":
-          description: "Get successful"
+          description: Get successful
           content:
             application/json:
               schema:
@@ -139,7 +122,7 @@ paths:
               $ref: "#/components/schemas/Device"
       responses:
         "204":
-          description: "Update successful, no content returned"
+          description: Update successful, no content returned
         "400":
           description: Invalid request
           content:
@@ -166,7 +149,7 @@ paths:
           required: true
       responses:
         "200":
-          description: "Get successful"
+          description: Get successful
           content:
             application/json:
               schema:
@@ -196,7 +179,7 @@ paths:
               $ref: "#/components/schemas/PowerGranted"
       responses:
         "204":
-          description: "Update successful, no content returned"
+          description: Update successful, no content returned
         "400":
           description: Invalid request
           content:
@@ -205,6 +188,70 @@ paths:
                 type: string
         "404":
           description: Not found - the id does not corresponed to a registered device
+          content:
+            text/plain:
+              schema:
+                type: string
+  /subscriptions:
+    get:
+      tags:
+        - subscription
+      summary: Lists subscriptions
+      description: Gets a list of all subscriptions
+      operationId: listSubscriptions
+      x-scala-package: subscription
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Subscription'
+    post:
+      tags:
+        - subscription
+      summary: Adds a subscription
+      description: Adds a new subscription
+      operationId: addSubscription
+      x-scala-package: subscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Subscription"
+      responses:
+        "201":
+          description: Subscription successfully added. The content is the ID of the subscription.
+          content:
+            text/plain:
+              schema:
+                type: string
+        "400":
+          description: Invalid request
+          content:
+            text/plain:
+              schema:
+                type: string
+  /subscriptions/{id}:
+    delete:
+      tags:
+        - subscription
+      operationId: deleteSubscription
+      x-scala-package: subscription
+      parameters:
+        - name: id
+          in: path
+          schema:
+            type: string
+          required: true
+      responses:
+        "204":
+          description: Delete successful. There is no content in the result.
+        "404":
+          description: Not found - the id does not corresponed to an existing subscription
           content:
             text/plain:
               schema:
@@ -228,3 +275,16 @@ components:
     PowerGranted:
       description: the power that the device has been granted in watts
       type: number
+    Subscription:
+      type: object
+      required:
+        - observedURL
+        - targetURL
+      properties:
+        observedURL:
+          description: the URL of the resource that is being observed
+          type: string
+        observerURL:
+          description: the URL on the client that will receive notifications
+          type: string
+

@@ -1,26 +1,23 @@
 package org.opendcgrid.app.polaris.device
 
-import org.opendcgrid.app.polaris.HTTPError
+import org.opendcgrid.app.polaris.{HTTPError, PolarisHandler}
 import org.opendcgrid.app.polaris.definitions.Device
+import org.opendcgrid.app.polaris.subscription.{Notification, NotificationAction, PolarisSubscriptionHandler}
 
 import scala.collection.mutable
 import scala.concurrent.Future
 
-class PolarisDeviceHandler extends DeviceHandler {
+class PolarisDeviceHandler(val subscriptionHandler: PolarisSubscriptionHandler) extends DeviceHandler with PolarisHandler {
   private val devices = mutable.HashMap[String, Device]()
   private val powerGranted = mutable.HashMap[String, BigDecimal]()
 
-  override def reset(respond: DeviceResource.ResetResponse.type)(): Future[DeviceResource.ResetResponse] = {
-    devices.clear()
-    powerGranted.clear()
-    Future.successful(respond.Created("reset complete"))
-  }
 
   override def addDevice(respond: DeviceResource.AddDeviceResponse.type)(body: Device): Future[DeviceResource.AddDeviceResponse] = {
     if (devices.contains(body.id)) {
       Future.successful(respond.BadRequest("Device exists"))
     } else {
       devices.put(body.id, body)
+      subscriptionHandler.notify(Notification("TBD", NotificationAction.Post.value, "TBD"))
       Future.successful(respond.Created(body.id))
     }
   }
@@ -37,6 +34,7 @@ class PolarisDeviceHandler extends DeviceHandler {
   override def putDevice(respond: DeviceResource.PutDeviceResponse.type)(id: String, body: Device): Future[DeviceResource.PutDeviceResponse] = {
     if (devices.contains(id)) {
       devices.put(id, body)
+      subscriptionHandler.notify(Notification("TBD", NotificationAction.Post.value, "TBD"))
       Future.successful(respond.NoContent)
     } else Future.successful(respond.NotFound(HTTPError.NotFound(id).message))
   }
@@ -50,7 +48,13 @@ class PolarisDeviceHandler extends DeviceHandler {
   override def putPowerGranted(respond: DeviceResource.PutPowerGrantedResponse.type)(id: String, body: BigDecimal): Future[DeviceResource.PutPowerGrantedResponse] = {
     if (devices.contains(id)) {
       powerGranted.put(id, body)
+      subscriptionHandler.notify(Notification("TBD", NotificationAction.Post.value, "TBD"))
       Future.successful(respond.NoContent)
     } else Future.successful(respond.NotFound(HTTPError.NotFound(id).message))
+  }
+
+  override def reset(): Unit = {
+    devices.clear()
+    powerGranted.clear()
   }
 }
