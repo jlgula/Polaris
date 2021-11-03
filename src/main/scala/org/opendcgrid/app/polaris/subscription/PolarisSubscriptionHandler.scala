@@ -1,16 +1,34 @@
 package org.opendcgrid.app.polaris.subscription
 
+import akka.actor.ActorSystem
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
+import org.opendcgrid.app.polaris.definitions.{Notification, Subscription}
+import org.opendcgrid.app.polaris.notification.{NotificationClient, PostNotificationResponse}
 import org.opendcgrid.app.polaris.{HTTPError, PolarisHandler}
-import org.opendcgrid.app.polaris.definitions.Subscription
 
 import java.util.UUID
 import scala.collection.mutable
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContextExecutor, Future}
+import scala.util.{Failure, Success}
 
-class PolarisSubscriptionHandler extends SubscriptionHandler with PolarisHandler {
+class PolarisSubscriptionHandler(sys: ActorSystem) extends SubscriptionHandler with PolarisHandler {
+  implicit val system: ActorSystem = sys
+  implicit val executionContext: ExecutionContextExecutor = system.dispatcher
+  implicit val requester: HttpRequest => Future[HttpResponse] = Http().singleRequest(_)
   private val subscriptions = mutable.HashMap[String, Subscription]()
   def notify(notification: Notification): Unit = {
-    subscriptions.values.filter(_.observedUrl == notification.observed).foreach(println(_)) // TODO: send message
+    subscriptions.values.filter(_.observedUrl == notification.observed).foreach { subscription =>
+      println(s"Notification: $subscription, $notification")
+      val result = NotificationClient(subscription.observerUrl.get).postNotification(notification)
+      result.value.onComplete{
+        case Success(Right(PostNotificationResponse.NoContent(_))) =>  // Done - nothing to do
+        case Success(Right(PostNotificationResponse.BadRequest(message))) => throw new IllegalStateException(s"PolarisSubscriptionHandler.notify failed: $message")
+        case Success(Left(Left(throwable))) => throw new IllegalStateException(s"PolarisSubscriptionHandler.notify failed: $throwable")
+        case Success(Left(Right(response))) => throw new IllegalStateException(s"PolarisSubscriptionHandler.notify failed - unexpected response $response")
+        case Failure(other) => throw new IllegalStateException(s"PolarisSubscriptionHandler.notify failed: $other")
+      }
+    }
   }
 
   override def addSubscription(respond: SubscriptionResource.AddSubscriptionResponse.type)(body: Subscription): Future[SubscriptionResource.AddSubscriptionResponse] = {

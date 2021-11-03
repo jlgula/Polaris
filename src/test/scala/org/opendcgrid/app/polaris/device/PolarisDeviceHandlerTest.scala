@@ -1,5 +1,6 @@
 package org.opendcgrid.app.polaris.device
 
+import akka.actor.ActorSystem
 import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
@@ -15,7 +16,8 @@ import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.Duration
 
 class PolarisDeviceHandlerTest extends AnyFunSuite with ScalatestRouteTest {
-  private val subscriptionHandler = new PolarisSubscriptionHandler()
+  private val actorSystem = implicitly[ActorSystem]
+  private val subscriptionHandler = new PolarisSubscriptionHandler(actorSystem)
   private val deviceHandler = new PolarisDeviceHandler(subscriptionHandler)
   private val deviceRoutes = DeviceResource.routes(deviceHandler)
   private val gcRoutes = GcResource.routes(new PolarisGCHandler(deviceHandler, subscriptionHandler))

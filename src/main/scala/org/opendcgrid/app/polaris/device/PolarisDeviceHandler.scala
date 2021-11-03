@@ -1,11 +1,13 @@
 package org.opendcgrid.app.polaris.device
 
 import org.opendcgrid.app.polaris.{HTTPError, PolarisHandler}
-import org.opendcgrid.app.polaris.definitions.Device
-import org.opendcgrid.app.polaris.subscription.{Notification, NotificationAction, PolarisSubscriptionHandler}
+import org.opendcgrid.app.polaris.definitions.{Device, Notification}
+import org.opendcgrid.app.polaris.subscription.{NotificationAction, PolarisSubscriptionHandler}
 
 import scala.collection.mutable
 import scala.concurrent.Future
+import Device._
+import io.circe.syntax._
 
 class PolarisDeviceHandler(val subscriptionHandler: PolarisSubscriptionHandler) extends DeviceHandler with PolarisHandler {
   private val devices = mutable.HashMap[String, Device]()
@@ -17,7 +19,7 @@ class PolarisDeviceHandler(val subscriptionHandler: PolarisSubscriptionHandler) 
       Future.successful(respond.BadRequest("Device exists"))
     } else {
       devices.put(body.id, body)
-      subscriptionHandler.notify(Notification("TBD", NotificationAction.Post.value, "TBD"))
+      subscriptionHandler.notify(Notification("v1/devices", NotificationAction.Post.value, body.asJson.toString()))
       Future.successful(respond.Created(body.id))
     }
   }
@@ -34,7 +36,7 @@ class PolarisDeviceHandler(val subscriptionHandler: PolarisSubscriptionHandler) 
   override def putDevice(respond: DeviceResource.PutDeviceResponse.type)(id: String, body: Device): Future[DeviceResource.PutDeviceResponse] = {
     if (devices.contains(id)) {
       devices.put(id, body)
-      subscriptionHandler.notify(Notification("TBD", NotificationAction.Post.value, "TBD"))
+      subscriptionHandler.notify(Notification(s"v1/devices/$id", NotificationAction.Post.value, body.asJson.toString()))
       Future.successful(respond.NoContent)
     } else Future.successful(respond.NotFound(HTTPError.NotFound(id).message))
   }
@@ -48,7 +50,7 @@ class PolarisDeviceHandler(val subscriptionHandler: PolarisSubscriptionHandler) 
   override def putPowerGranted(respond: DeviceResource.PutPowerGrantedResponse.type)(id: String, body: BigDecimal): Future[DeviceResource.PutPowerGrantedResponse] = {
     if (devices.contains(id)) {
       powerGranted.put(id, body)
-      subscriptionHandler.notify(Notification("TBD", NotificationAction.Post.value, "TBD"))
+      subscriptionHandler.notify(Notification(s"v1/devices/$id/powerGranted", NotificationAction.Post.value, body.asJson.toString()))
       Future.successful(respond.NoContent)
     } else Future.successful(respond.NotFound(HTTPError.NotFound(id).message))
   }

@@ -12,7 +12,7 @@ import scala.concurrent.duration.Duration
 
 object Polaris extends App {
   implicit def actorSystem: ActorSystem = ActorSystem()
-  private val subscriptionHandler = new PolarisSubscriptionHandler()
+  private val subscriptionHandler = new PolarisSubscriptionHandler(actorSystem)
   private val subscriptionRoutes = SubscriptionResource.routes(subscriptionHandler)
   private val deviceHandler = new PolarisDeviceHandler(subscriptionHandler)
   private val deviceRoutes = DeviceResource.routes(deviceHandler)

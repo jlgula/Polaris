@@ -1,0 +1,60 @@
+openapi: 3.0.0
+servers:
+  - url: http://localhost:8080/v1
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/jlgula/Polaris/1.0.0
+info:
+  version: 1.0.0
+  title: Polaris Subscription Handler
+  description: client interface for subscriptions
+  contact:
+    email: jlgula@papugh.com
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+paths:
+  /notification:
+    post:
+      summary: Receive notifications
+      description: Notifications from observed resource
+      operationId: postNotification
+      x-scala-package: notification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Notification"
+      responses:
+        "204":
+          description: Content received
+          content:
+            text/plain:
+              schema:
+                type: string
+        "400":
+          description: Invalid request
+          content:
+            text/plain:
+              schema:
+                type: string
+
+components:
+  schemas:
+    Notification:
+      type: object
+      required:
+        - observed
+        - action
+        - value
+      properties:
+        observed:
+          type: string
+          description: full URL of the observed resource
+        action:
+          type: string
+          description: the action performed on the resource
+        value:
+          type: string
+          description: JSON encoded parameter for the action
+
