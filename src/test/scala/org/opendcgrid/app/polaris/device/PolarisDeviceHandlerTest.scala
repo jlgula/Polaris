@@ -1,13 +1,14 @@
 package org.opendcgrid.app.polaris.device
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
+import akka.http.scaladsl.model.{HttpRequest, HttpResponse, Uri}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import org.opendcgrid.app.pclient.definitions.{Device => ClientDevice}
 import org.opendcgrid.app.pclient.device.{AddDeviceResponse, DeviceClient, GetDeviceResponse, GetPowerGrantedResponse, ListDevicesResponse, PutDeviceResponse, PutPowerGrantedResponse}
 import org.opendcgrid.app.pclient.gc.{GcClient, ResetResponse}
+import org.opendcgrid.app.polaris.PolarisTestUtilities
 import org.opendcgrid.app.polaris.gc.{GcResource, PolarisGCHandler}
 import org.opendcgrid.app.polaris.subscription.PolarisSubscriptionHandler
 import org.scalatest.funsuite.AnyFunSuite
@@ -18,7 +19,8 @@ import scala.concurrent.duration.Duration
 class PolarisDeviceHandlerTest extends AnyFunSuite with ScalatestRouteTest {
   private val actorSystem = implicitly[ActorSystem]
   private val subscriptionHandler = new PolarisSubscriptionHandler(actorSystem)
-  private val deviceHandler = new PolarisDeviceHandler(subscriptionHandler, actorSystem.dispatcher)
+  private val gcURL = Uri("http://localhost").withPort(PolarisTestUtilities.getUnusedPort)
+  private val deviceHandler = new PolarisDeviceHandler(gcURL, subscriptionHandler, actorSystem.dispatcher)
   private val deviceRoutes = DeviceResource.routes(deviceHandler)
   private val gcRoutes = GcResource.routes(new PolarisGCHandler(deviceHandler, subscriptionHandler))
   private val routes = deviceRoutes ~ gcRoutes

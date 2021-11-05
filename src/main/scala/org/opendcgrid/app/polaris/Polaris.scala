@@ -2,6 +2,7 @@ package org.opendcgrid.app.polaris
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
+import akka.http.scaladsl.model.Uri
 import akka.http.scaladsl.server.Directives._
 import org.opendcgrid.app.polaris.device.{DeviceResource, PolarisDeviceHandler}
 import org.opendcgrid.app.polaris.gc.{GcResource, PolarisGCHandler}
@@ -14,10 +15,11 @@ object Polaris extends App {
   implicit def actorSystem: ActorSystem = ActorSystem()
   private val subscriptionHandler = new PolarisSubscriptionHandler(actorSystem)
   private val subscriptionRoutes = SubscriptionResource.routes(subscriptionHandler)
-  private val deviceHandler = new PolarisDeviceHandler(subscriptionHandler, actorSystem.dispatcher)
+  private val url = Uri("http://localhost:8080")
+  private val deviceHandler = new PolarisDeviceHandler(url, subscriptionHandler, actorSystem.dispatcher)
   private val deviceRoutes = DeviceResource.routes(deviceHandler)
   private val gcRoutes = GcResource.routes(new PolarisGCHandler(deviceHandler, subscriptionHandler))
   private val routes = deviceRoutes ~ gcRoutes ~ subscriptionRoutes
-  Await.result(Http().newServerAt("127.0.0.1", 8080).bindFlow(routes), Duration.Inf)
+  Await.result(Http().newServerAt(url.authority.host.toString(), url.authority.port).bindFlow(routes), Duration.Inf)
   println("Running at http://localhost:8080!")
 }

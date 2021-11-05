@@ -2,14 +2,13 @@ package org.opendcgrid.app.polaris.subscription
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
+import akka.http.scaladsl.model.{HttpRequest, HttpResponse, Uri}
 import akka.http.scaladsl.server.Directives._
-import akka.stream.Materializer
 import org.opendcgrid.app.pclient.definitions.{Subscription, Device => ClientDevice}
 import org.opendcgrid.app.pclient.device.DeviceClient
 import org.opendcgrid.app.pclient.subscription.SubscriptionClient
+import org.opendcgrid.app.polaris.PolarisTestUtilities
 import org.opendcgrid.app.polaris.definitions.Notification
-import org.opendcgrid.app.polaris.device.DeviceResource.PutPowerGrantedResponse
 import org.opendcgrid.app.polaris.device.{DeviceResource, PolarisDeviceHandler}
 import org.opendcgrid.app.polaris.gc.{GcResource, PolarisGCHandler}
 import org.opendcgrid.app.polaris.notification.{NotificationHandler, NotificationResource}
@@ -76,28 +75,31 @@ class PolarisSubscriptionHandlerTest extends AnyFunSuite {
   test("full") {
     implicit def actorSystem: ActorSystem = ActorSystem()
     implicit def context: ExecutionContext = actorSystem.dispatcher
+    implicit val requester: HttpRequest => Future[HttpResponse] = Http().singleRequest(_)
+    val localHost = Uri("http://localhost")
+    val gcPort = PolarisTestUtilities.getUnusedPort
+    val observerPort = PolarisTestUtilities.getUnusedPort
+    val gcURL = localHost.withPort(gcPort)
     val testHandler = new TestNotificationHandler
-    val materializer = Materializer(actorSystem)
-    val notificationRoutes = NotificationResource.routes(testHandler)(materializer)
+    val notificationRoutes = NotificationResource.routes(testHandler)
     val deviceID = "123"
     val device = ClientDevice(deviceID, "test")
     val subscriptionHandler = new PolarisSubscriptionHandler(actorSystem)
     val subscriptionRoutes = SubscriptionResource.routes(subscriptionHandler)
-    val deviceHandler = new PolarisDeviceHandler(subscriptionHandler, context)
+    val deviceHandler = new PolarisDeviceHandler(gcURL, subscriptionHandler, context)
     val deviceRoutes = DeviceResource.routes(deviceHandler)
     val gcRoutes = GcResource.routes(new PolarisGCHandler(deviceHandler, subscriptionHandler))
     val serverRoutes = deviceRoutes ~ gcRoutes ~ subscriptionRoutes
-    implicit val requester: HttpRequest => Future[HttpResponse] = Http().singleRequest(_)
-    val observedURL = "http://localhost:8080/v1/devices/123/powerGranted"
-    val observerURL = "http://localhost:8081"
-    val subscription = Subscription(observedURL,observerURL)
-    val subscriptionClient = SubscriptionClient("http://localhost:8080")(requester, context, Materializer(actorSystem))
+    val observedURL = gcURL.withPath(Uri.Path("/v1/devices/123/powerGranted"))
+    val observerURL = localHost.withPort(observerPort)
+    val subscription = Subscription(observedURL.toString(),observerURL.toString())
+    val subscriptionClient = SubscriptionClient(gcURL.toString())
     val powerGranted = BigDecimal(10.0)
-    val deviceClient = DeviceClient("http://localhost:8080")(requester, context, Materializer(actorSystem))
+    val deviceClient = DeviceClient(gcURL.toString())
 
     val result = for {
-      _ <- Http().newServerAt("127.0.0.1", 8080).bindFlow(serverRoutes)
-      _ <- Http().newServerAt("127.0.0.1", 8081).bindFlow(notificationRoutes)
+      _ <- Http().newServerAt(gcURL.authority.host.toString(), gcURL.authority.port).bindFlow(serverRoutes)
+      _ <- Http().newServerAt(observerURL.authority.host.toString(), observerURL.authority.port).bindFlow(notificationRoutes)
       _ <- deviceClient.addDevice(device).value
       _ <- subscriptionClient.addSubscription(subscription).value
       put <- deviceClient.putPowerGranted(deviceID, powerGranted).value
@@ -127,5 +129,4 @@ class PolarisSubscriptionHandlerTest extends AnyFunSuite {
   }
 
  */
-
 }

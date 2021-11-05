@@ -7,10 +7,11 @@ import org.opendcgrid.app.polaris.subscription.{NotificationAction, PolarisSubsc
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 import Device._
+import akka.http.scaladsl.model.Uri
 import io.circe.syntax._
 
 
-class PolarisDeviceHandler(val subscriptionHandler: PolarisSubscriptionHandler, context: ExecutionContext) extends DeviceHandler with PolarisHandler {
+class PolarisDeviceHandler(val uri: Uri, val subscriptionHandler: PolarisSubscriptionHandler, context: ExecutionContext) extends DeviceHandler with PolarisHandler {
   private val devices = mutable.HashMap[String, Device]()
   private val powerGranted = mutable.HashMap[String, BigDecimal]()
 
@@ -51,7 +52,7 @@ class PolarisDeviceHandler(val subscriptionHandler: PolarisSubscriptionHandler, 
   override def putPowerGranted(respond: DeviceResource.PutPowerGrantedResponse.type)(id: String, body: BigDecimal): Future[DeviceResource.PutPowerGrantedResponse] = {
     if (devices.contains(id)) {
       powerGranted.put(id, body)
-      val xx = subscriptionHandler.notify(Notification(s"http://localhost:8080/v1/devices/$id/powerGranted", NotificationAction.Post.value, body.asJson.toString()))
+      val xx = subscriptionHandler.notify(Notification(s"$uri/v1/devices/$id/powerGranted", NotificationAction.Post.value, body.asJson.toString()))
       xx.map(_ => respond.NoContent)(context)
       //Future.successful(respond.NoContent)
     } else Future.successful(respond.NotFound(HTTPError.NotFound(id).message))
