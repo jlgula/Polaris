@@ -9,7 +9,8 @@ import org.opendcgrid.app.polaris.{HTTPError, PolarisHandler}
 
 import java.util.UUID
 import scala.collection.mutable
-import scala.concurrent.{ExecutionContextExecutor, Future}
+import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, ExecutionContextExecutor, Future}
 import scala.util.{Failure, Success}
 
 class PolarisSubscriptionHandler(sys: ActorSystem) extends SubscriptionHandler with PolarisHandler {
@@ -17,10 +18,16 @@ class PolarisSubscriptionHandler(sys: ActorSystem) extends SubscriptionHandler w
   implicit val executionContext: ExecutionContextExecutor = system.dispatcher
   implicit val requester: HttpRequest => Future[HttpResponse] = Http().singleRequest(_)
   private val subscriptions = mutable.HashMap[String, Subscription]()
-  def notify(notification: Notification): Unit = {
+  def notify(notification: Notification): Future[Unit] = {
+    /*
     subscriptions.values.filter(_.observedUrl == notification.observed).foreach { subscription =>
       println(s"Notification: $subscription, $notification")
-      val result = NotificationClient(subscription.observerUrl.get).postNotification(notification)
+      val result = NotificationClient(subscription.observerUrl).postNotification(notification)
+      val xx = Await.result(result.value, Duration(1, "seconds"))
+      println(s"notify: $xx")
+
+     */
+      /*
       result.value.onComplete{
         case Success(Right(PostNotificationResponse.NoContent(_))) =>  // Done - nothing to do
         case Success(Right(PostNotificationResponse.BadRequest(message))) => throw new IllegalStateException(s"PolarisSubscriptionHandler.notify failed: $message")
@@ -28,7 +35,13 @@ class PolarisSubscriptionHandler(sys: ActorSystem) extends SubscriptionHandler w
         case Success(Left(Right(response))) => throw new IllegalStateException(s"PolarisSubscriptionHandler.notify failed - unexpected response $response")
         case Failure(other) => throw new IllegalStateException(s"PolarisSubscriptionHandler.notify failed: $other")
       }
-    }
+
+       */
+    val subs = subscriptions.values.filter(_.observedUrl == notification.observed)
+    val xx = subs.map(subscription => NotificationClient(subscription.observerUrl).postNotification(notification)).map(_.value)
+    val yy = Future.sequence(xx)
+    // PostNotificationResponse.NoContent: PostNotificationResponse
+    yy.map(aa => aa.foreach(_ == Right(PostNotificationResponse.NoContent)))
   }
 
   override def addSubscription(respond: SubscriptionResource.AddSubscriptionResponse.type)(body: Subscription): Future[SubscriptionResource.AddSubscriptionResponse] = {

@@ -14,7 +14,7 @@ object Polaris extends App {
   implicit def actorSystem: ActorSystem = ActorSystem()
   private val subscriptionHandler = new PolarisSubscriptionHandler(actorSystem)
   private val subscriptionRoutes = SubscriptionResource.routes(subscriptionHandler)
-  private val deviceHandler = new PolarisDeviceHandler(subscriptionHandler)
+  private val deviceHandler = new PolarisDeviceHandler(subscriptionHandler, actorSystem.dispatcher)
   private val deviceRoutes = DeviceResource.routes(deviceHandler)
   private val gcRoutes = GcResource.routes(new PolarisGCHandler(deviceHandler, subscriptionHandler))
   private val routes = deviceRoutes ~ gcRoutes ~ subscriptionRoutes

@@ -28,10 +28,6 @@ paths:
       responses:
         "204":
           description: Content received
-          content:
-            text/plain:
-              schema:
-                type: string
         "400":
           description: Invalid request
           content:

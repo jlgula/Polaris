@@ -18,7 +18,7 @@ import scala.concurrent.duration.Duration
 class PolarisDeviceHandlerTest extends AnyFunSuite with ScalatestRouteTest {
   private val actorSystem = implicitly[ActorSystem]
   private val subscriptionHandler = new PolarisSubscriptionHandler(actorSystem)
-  private val deviceHandler = new PolarisDeviceHandler(subscriptionHandler)
+  private val deviceHandler = new PolarisDeviceHandler(subscriptionHandler, actorSystem.dispatcher)
   private val deviceRoutes = DeviceResource.routes(deviceHandler)
   private val gcRoutes = GcResource.routes(new PolarisGCHandler(deviceHandler, subscriptionHandler))
   private val routes = deviceRoutes ~ gcRoutes

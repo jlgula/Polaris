@@ -279,7 +279,7 @@ components:
       type: object
       required:
         - observedURL
-        - targetURL
+        - observerURL
       properties:
         observedURL:
           description: the URL of the resource that is being observed
