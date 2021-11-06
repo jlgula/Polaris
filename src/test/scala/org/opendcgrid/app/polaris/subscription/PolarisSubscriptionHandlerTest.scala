@@ -86,9 +86,9 @@ class PolarisSubscriptionHandlerTest extends AnyFunSuite {
     val notificationRoutes = NotificationResource.routes(testHandler)
     val deviceID = "123"
     val device = ClientDevice(deviceID, "test")
-    val subscriptionHandler = new PolarisSubscriptionHandler(actorSystem)
+    val subscriptionHandler = new PolarisSubscriptionHandler
     val subscriptionRoutes = SubscriptionResource.routes(subscriptionHandler)
-    val deviceHandler = new PolarisDeviceHandler(gcURL, subscriptionHandler, context)
+    val deviceHandler = new PolarisDeviceHandler(gcURL, subscriptionHandler)
     val deviceRoutes = DeviceResource.routes(deviceHandler)
     val gcRoutes = GcResource.routes(new PolarisGCHandler(deviceHandler, subscriptionHandler))
     val serverRoutes = deviceRoutes ~ gcRoutes ~ subscriptionRoutes
@@ -109,7 +109,7 @@ class PolarisSubscriptionHandlerTest extends AnyFunSuite {
       put <- deviceClient.putPowerGranted(deviceID, powerGranted).value
     } yield put
     Await.result(result, Duration.Inf) match {
-      case Right(value) => // println(value)// Succeed
+      case Right(_) => // println(value)// Succeed
       case other => fail(s"unexpected response: $other")
     }
     //println(s"Testhandler: $testHandler ${testHandler.observationSeen.get}")

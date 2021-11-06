@@ -9,14 +9,12 @@ import org.opendcgrid.app.polaris.{HTTPError, PolarisHandler}
 
 import java.util.UUID
 import scala.collection.mutable
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, ExecutionContextExecutor, Future}
-import scala.util.{Failure, Success}
+import scala.concurrent.{ExecutionContextExecutor, Future}
 
-class PolarisSubscriptionHandler(sys: ActorSystem) extends SubscriptionHandler with PolarisHandler {
-  implicit val system: ActorSystem = sys
+class PolarisSubscriptionHandler(implicit system: ActorSystem, requester: HttpRequest => Future[HttpResponse]) extends SubscriptionHandler with PolarisHandler {
+  //implicit val system: ActorSystem = sys
   implicit val executionContext: ExecutionContextExecutor = system.dispatcher
-  implicit val requester: HttpRequest => Future[HttpResponse] = Http().singleRequest(_)
+  //implicit val requester: HttpRequest => Future[HttpResponse] = Http().singleRequest(_)
   private val subscriptions = mutable.HashMap[String, Subscription]()
   private val clients = mutable.HashMap[String, NotificationClient]()
 

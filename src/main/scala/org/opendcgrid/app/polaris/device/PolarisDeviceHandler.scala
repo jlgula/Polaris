@@ -11,7 +11,7 @@ import akka.http.scaladsl.model.Uri
 import io.circe.syntax._
 
 
-class PolarisDeviceHandler(val uri: Uri, val subscriptionHandler: PolarisSubscriptionHandler, context: ExecutionContext) extends DeviceHandler with PolarisHandler {
+class PolarisDeviceHandler(val uri: Uri, val subscriptionHandler: PolarisSubscriptionHandler)(implicit context: ExecutionContext) extends DeviceHandler with PolarisHandler {
   private val devices = mutable.HashMap[String, Device]()
   private val powerGranted = mutable.HashMap[String, BigDecimal]()
 
@@ -22,7 +22,7 @@ class PolarisDeviceHandler(val uri: Uri, val subscriptionHandler: PolarisSubscri
     } else {
       devices.put(body.id, body)
       val notificationsFuture = subscriptionHandler.notify(Notification("v1/devices", NotificationAction.Post.value, body.asJson.toString()))
-      notificationsFuture.map(_ => respond.Created(body.id))(context)
+      notificationsFuture.map(_ => respond.Created(body.id))
     }
   }
 
@@ -39,7 +39,7 @@ class PolarisDeviceHandler(val uri: Uri, val subscriptionHandler: PolarisSubscri
     if (devices.contains(id)) {
       devices.put(id, body)
       val notificationsFuture = subscriptionHandler.notify(Notification(s"v1/devices/$id", NotificationAction.Post.value, body.asJson.toString()))
-      notificationsFuture.map(_ => respond.NoContent)(context)
+      notificationsFuture.map(_ => respond.NoContent)
     } else Future.successful(respond.NotFound(HTTPError.NotFound(id).message))
   }
 
