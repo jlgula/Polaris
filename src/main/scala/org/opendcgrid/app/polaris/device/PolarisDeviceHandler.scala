@@ -21,8 +21,8 @@ class PolarisDeviceHandler(val uri: Uri, val subscriptionHandler: PolarisSubscri
       Future.successful(respond.BadRequest("Device exists"))
     } else {
       devices.put(body.id, body)
-      subscriptionHandler.notify(Notification("v1/devices", NotificationAction.Post.value, body.asJson.toString()))
-      Future.successful(respond.Created(body.id))
+      val notificationsFuture = subscriptionHandler.notify(Notification("v1/devices", NotificationAction.Post.value, body.asJson.toString()))
+      notificationsFuture.map(_ => respond.Created(body.id))(context)
     }
   }
 
@@ -38,8 +38,8 @@ class PolarisDeviceHandler(val uri: Uri, val subscriptionHandler: PolarisSubscri
   override def putDevice(respond: DeviceResource.PutDeviceResponse.type)(id: String, body: Device): Future[DeviceResource.PutDeviceResponse] = {
     if (devices.contains(id)) {
       devices.put(id, body)
-      subscriptionHandler.notify(Notification(s"v1/devices/$id", NotificationAction.Post.value, body.asJson.toString()))
-      Future.successful(respond.NoContent)
+      val notificationsFuture = subscriptionHandler.notify(Notification(s"v1/devices/$id", NotificationAction.Post.value, body.asJson.toString()))
+      notificationsFuture.map(_ => respond.NoContent)(context)
     } else Future.successful(respond.NotFound(HTTPError.NotFound(id).message))
   }
 
