@@ -16,6 +16,7 @@ import org.opendcgrid.app.polaris.gc.{GcResource, PolarisGCHandler}
 import org.opendcgrid.app.polaris.notification.{NotificationHandler, NotificationResource}
 import org.scalatest.funsuite.AnyFunSuite
 
+import java.util.concurrent.ConcurrentLinkedQueue
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
 
@@ -30,15 +31,19 @@ class PolarisSubscriptionHandlerTest extends AnyFunSuite {
       case Right(_) => // println(value)// Succeed
       case other => fail(s"unexpected response: $other")
     }
-    assertResult(true)(fixture.testHandler.observationSeen.get())
-
+    val observation = fixture.testHandler.observations.peek()
+    assertResult(powerGranted)(observation)
   }
 }
 
 class TestNotificationHandler extends NotificationHandler() {
-  val observationSeen = new java.util.concurrent.atomic.AtomicBoolean(false)
+  import io.circe.parser.decode
+  val observations = new ConcurrentLinkedQueue[BigDecimal]()
   override def postNotification(respond: NotificationResource.PostNotificationResponse.type)(body: Notification): Future[NotificationResource.PostNotificationResponse] = {
-    observationSeen.set(true)
+    decode[BigDecimal](body.value) match {
+      case Right(bigNum) => observations.add(bigNum)
+      case Left(error) => throw new IllegalStateException(s"postNotification - unexpected result: $error")
+    }
     //println(s"TestNotificationHandler: $this, $body, $observationSeen")
     Future.successful(respond.NoContent)
   }
