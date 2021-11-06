@@ -21,6 +21,11 @@ import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
 
 class PolarisSubscriptionHandlerTest extends AnyFunSuite {
+  test("Fixture test") {
+    val fixture = new TestFixture
+    val result = fixture.start()
+    Await.result(result, Duration.Inf)
+  }
 
   test("PowerGranted observed") {
     val fixture = new TestFixture
@@ -33,6 +38,20 @@ class PolarisSubscriptionHandlerTest extends AnyFunSuite {
     }
     val observation = fixture.testHandler.observations.peek()
     assertResult(powerGranted)(observation)
+  }
+
+  test("Observation performance") {
+    import scala.jdk.CollectionConverters
+    val fixture = new TestFixture
+    implicit val ec: ExecutionContext = fixture.context
+    val powerGranted = BigDecimal(10.0)
+    val repeats = 10
+    val result = (0 until repeats).foldLeft(fixture.start()){
+      case (prev, _) => prev.flatMap(_ => fixture.deviceClient.putPowerGranted(fixture.deviceID, powerGranted).value.map(_ => ()))
+    }
+    Await.result(result, Duration.Inf)
+    assertResult(repeats)(fixture.testHandler.observations.size())
+    fixture.testHandler.observations.forEach(observation => assertResult(powerGranted)(observation))
   }
 }
 
