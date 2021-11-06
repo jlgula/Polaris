@@ -18,35 +18,28 @@ class PolarisSubscriptionHandler(sys: ActorSystem) extends SubscriptionHandler w
   implicit val executionContext: ExecutionContextExecutor = system.dispatcher
   implicit val requester: HttpRequest => Future[HttpResponse] = Http().singleRequest(_)
   private val subscriptions = mutable.HashMap[String, Subscription]()
-  def notify(notification: Notification): Future[Unit] = {
-    /*
-    subscriptions.values.filter(_.observedUrl == notification.observed).foreach { subscription =>
-      println(s"Notification: $subscription, $notification")
-      val result = NotificationClient(subscription.observerUrl).postNotification(notification)
-      val xx = Await.result(result.value, Duration(1, "seconds"))
-      println(s"notify: $xx")
+  private val clients = mutable.HashMap[String, NotificationClient]()
 
-     */
-      /*
-      result.value.onComplete{
-        case Success(Right(PostNotificationResponse.NoContent(_))) =>  // Done - nothing to do
-        case Success(Right(PostNotificationResponse.BadRequest(message))) => throw new IllegalStateException(s"PolarisSubscriptionHandler.notify failed: $message")
-        case Success(Left(Left(throwable))) => throw new IllegalStateException(s"PolarisSubscriptionHandler.notify failed: $throwable")
-        case Success(Left(Right(response))) => throw new IllegalStateException(s"PolarisSubscriptionHandler.notify failed - unexpected response $response")
-        case Failure(other) => throw new IllegalStateException(s"PolarisSubscriptionHandler.notify failed: $other")
-      }
-
-       */
-    val subs = subscriptions.values.filter(_.observedUrl == notification.observed)
-    val xx = subs.map(subscription => NotificationClient(subscription.observerUrl).postNotification(notification)).map(_.value)
-    val yy = Future.sequence(xx)
-    // PostNotificationResponse.NoContent: PostNotificationResponse
-    yy.map(aa => aa.foreach(_ == Right(PostNotificationResponse.NoContent)))
+  /**
+   * Notifies all observers that a resource has changed
+   * @param notification a [[Notification]] that contains the observed resource and the new value.
+   * @return a [[Future]] that contains all the responses when it completes
+   */
+  def notify(notification: Notification): Future[Iterable[Either[Either[Throwable, HttpResponse], PostNotificationResponse]]] = {
+    // Find all the subscriptions that match the observed resource.
+    val matchingSubscriptions = subscriptions.values.filter(_.observedUrl == notification.observed)
+    // Post a notification to all observers and convert the resulting list of futures into a single future of the results.
+    // Note that Future.sequence actually runs all the futures in parallel, not in series.
+    Future.sequence(matchingSubscriptions.map(subscription => clients(subscription.observerUrl).postNotification(notification)).map(_.value))
   }
+
 
   override def addSubscription(respond: SubscriptionResource.AddSubscriptionResponse.type)(body: Subscription): Future[SubscriptionResource.AddSubscriptionResponse] = {
     val id = UUID.randomUUID().toString
     subscriptions.put(id, body)
+    if (!clients.contains(body.observerUrl)) {
+      clients.put(body.observerUrl, NotificationClient(body.observerUrl))
+    }
     Future.successful(respond.Created(id))
   }
 

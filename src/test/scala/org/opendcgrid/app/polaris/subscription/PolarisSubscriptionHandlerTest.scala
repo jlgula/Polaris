@@ -4,6 +4,8 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{HttpRequest, HttpResponse, Uri}
 import akka.http.scaladsl.server.Directives._
+import akka.http.scaladsl.server.Route
+import akka.stream.Materializer
 import org.opendcgrid.app.pclient.definitions.{Subscription, Device => ClientDevice}
 import org.opendcgrid.app.pclient.device.DeviceClient
 import org.opendcgrid.app.pclient.subscription.SubscriptionClient
@@ -93,12 +95,14 @@ class PolarisSubscriptionHandlerTest extends AnyFunSuite {
     val observedURL = gcURL.withPath(Uri.Path("/v1/devices/123/powerGranted"))
     val observerURL = localHost.withPort(observerPort)
     val subscription = Subscription(observedURL.toString(),observerURL.toString())
-    val subscriptionClient = SubscriptionClient(gcURL.toString())
+    val routeFunction: HttpRequest => Future[HttpResponse] = Route.toFunction(serverRoutes)
+    val materializer = Materializer(actorSystem)
+    val subscriptionClient = SubscriptionClient(gcURL.toString())(routeFunction, context, materializer)
     val powerGranted = BigDecimal(10.0)
-    val deviceClient = DeviceClient(gcURL.toString())
+    val deviceClient = DeviceClient(gcURL.toString())(routeFunction, context, materializer)
 
     val result = for {
-      _ <- Http().newServerAt(gcURL.authority.host.toString(), gcURL.authority.port).bindFlow(serverRoutes)
+      //_ <- Http().newServerAt(gcURL.authority.host.toString(), gcURL.authority.port).bindFlow(serverRoutes)
       _ <- Http().newServerAt(observerURL.authority.host.toString(), observerURL.authority.port).bindFlow(notificationRoutes)
       _ <- deviceClient.addDevice(device).value
       _ <- subscriptionClient.addSubscription(subscription).value
