@@ -7,7 +7,7 @@ import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import org.opendcgrid.app.pclient.definitions.{Device => ClientDevice}
-import org.opendcgrid.app.pclient.device.{AddDeviceResponse, DeviceClient, GetDeviceResponse, GetPowerGrantedResponse, ListDevicesResponse, PutDeviceResponse, PutPowerGrantedResponse}
+import org.opendcgrid.app.pclient.device.{AddDeviceResponse, DeleteDeviceResponse, DeviceClient, GetDeviceResponse, GetPowerAcceptedResponse, GetPowerGrantedResponse, ListDevicesResponse, PutDeviceResponse, PutPowerAcceptedResponse, PutPowerGrantedResponse}
 import org.opendcgrid.app.pclient.gc.{GcClient, ResetResponse}
 import org.opendcgrid.app.polaris.PolarisTestUtilities
 import org.opendcgrid.app.polaris.gc.{GcResource, PolarisGCHandler}
@@ -43,80 +43,89 @@ class PolarisDeviceHandlerTest extends AnyFunSuite with ScalatestRouteTest {
 
     */
   test("reset") {
-    validateReset()
+    reset()
   }
 
   test("listDevices") {
-    validateReset()
-    validateListDevices(Vector[ClientDevice]())
+    reset()
+    assertResult(Vector[ClientDevice]())(listDevices())
   }
 
   test("addDevice") {
-    validateReset()
+    reset()
     val device = ClientDevice("123", "test")
-    validateAddDevice(device)
-    validateListDevices(Vector(device))
+    addDevice(device)
+    assertResult(Vector(device))(listDevices())
   }
 
   test("getDevice") {
-    validateReset()
+    reset()
     val device = ClientDevice("123", "test")
-    validateAddDevice(device)
-    validateGetDevice(device.id, device)
+    addDevice(device)
+    assertResult(device)(getDevice(device.id))
   }
 
   test("getDevice not found") {
-    val result2 = deviceClient.getDevice("bad")
-    Await.result(result2.value, Duration.Inf) match {
-      case Right(GetDeviceResponse.NotFound(_)) => // Succeed
-      case other => fail(s"unexpected response: $other")
-    }
+    verifyNotFound("bad")
   }
 
   test("putDevice") {
-    validateReset()
+    reset()
     val device = ClientDevice("123", "test")
-    validateAddDevice(device)
+    addDevice(device)
     val update = ClientDevice("123", "changed", Some(10.0))
-    validatePutDevice(update)
-    validateGetDevice(device.id, update)
+    putDevice(update)
+    assertResult(update)(getDevice(device.id))
+  }
+
+  test("deleteDevice") {
+    reset()
+    val device = ClientDevice("123", "test")
+    addDevice(device)
+    deleteDevice(device.id)
+    verifyNotFound(device.id)
+    assertResult(Vector[ClientDevice]())(listDevices())
   }
 
   test("put/get PowerGranted") {
-    validateReset()
-    val device = ClientDevice("123", "test", Some(10.0))
-    validateAddDevice(device)
-    val powerGranted = BigDecimal(10.0)
-    val result = deviceClient.putPowerGranted(device.id, powerGranted)
-    Await.result(result.value, Duration.Inf) match {
-      case Right(PutPowerGrantedResponse.NoContent) => // Succeed
-      case other => fail(s"unexpected response: $other")
-    }
-    val result2 = deviceClient.getPowerGranted(device.id)
-    Await.result(result2.value, Duration.Inf) match {
-      case Right(GetPowerGrantedResponse.OK(value)) => assertResult(powerGranted)(value)
-      case other => fail(s"unexpected response: $other")
-    }
-
+    reset()
+    val id = "123"
+    val power = BigDecimal(10.0)
+    val device = ClientDevice(id, "test", powerRequested = Some(power))
+    addDevice(device)
+    assertResult(BigDecimal(0.0))(this.getPowerGranted(id))
+    putPowerGranted(id, power)
+    assertResult(power)(this.getPowerGranted(id))
   }
 
-  def validateReset(): Unit = {
-    val result2 = gcClient.reset()
-    Await.result(result2.value, Duration.Inf) match {
+  test("put/get PowerAccepted") {
+    reset()
+    val id = "123"
+    val power = BigDecimal(10.0)
+    val device = ClientDevice(id, "test", powerOffered = Some(power))
+    addDevice(device)
+    assertResult(BigDecimal(0.0))(this.getPowerAccepted(id))
+    putPowerAccepted(id, power)
+    assertResult(power)(this.getPowerAccepted(id))
+  }
+
+  def reset(): Unit = {
+    val result = gcClient.reset()
+    Await.result(result.value, Duration.Inf) match {
       case Right(ResetResponse.Created(_)) => // Succeed
       case other => fail(s"unexpected response: $other")
     }
   }
 
-  def validateListDevices(expected: Vector[ClientDevice]): Unit = {
-    val result2 = deviceClient.listDevices()
-    Await.result(result2.value, Duration.Inf) match {
-      case Right(ListDevicesResponse.OK(value)) => assertResult(expected)(value)
+  def listDevices(): Vector[ClientDevice] = {
+    val result = deviceClient.listDevices()
+    Await.result(result.value, Duration.Inf) match {
+      case Right(ListDevicesResponse.OK(value)) => value
       case other => fail(s"unexpected response: $other")
     }
   }
 
-  def validateAddDevice(device: ClientDevice): Unit = {
+  def addDevice(device: ClientDevice): Unit = {
     val result = deviceClient.addDevice(device)
     Await.result(result.value, Duration.Inf) match {
       case Right(AddDeviceResponse.Created(location)) => assertResult(device.id)(location)
@@ -124,18 +133,66 @@ class PolarisDeviceHandlerTest extends AnyFunSuite with ScalatestRouteTest {
     }
   }
 
-  def validateGetDevice(id: String, expected: ClientDevice): Unit = {
-    val result2 = deviceClient.getDevice(id)
-    Await.result(result2.value, Duration.Inf) match {
-      case Right(GetDeviceResponse.OK(value)) => assertResult(expected)(value)
+  def getDevice(id: String): ClientDevice = {
+    val result = deviceClient.getDevice(id)
+    Await.result(result.value, Duration.Inf) match {
+      case Right(GetDeviceResponse.OK(value)) => value
       case other => fail(s"unexpected response: $other")
     }
   }
 
-  def validatePutDevice(updatedDevice: ClientDevice): Unit = {
-    val result2 = deviceClient.putDevice(updatedDevice.id, updatedDevice)
-    Await.result(result2.value, Duration.Inf) match {
+  def putDevice(updatedDevice: ClientDevice): Unit = {
+    val result = deviceClient.putDevice(updatedDevice.id, updatedDevice)
+    Await.result(result.value, Duration.Inf) match {
       case Right(PutDeviceResponse.NoContent) => // Succeed
+      case other => fail(s"unexpected response: $other")
+    }
+  }
+
+  def deleteDevice(id: String): Unit = {
+    val result = deviceClient.deleteDevice(id)
+    Await.result(result.value, Duration.Inf) match {
+      case Right(DeleteDeviceResponse.NoContent) => // Succeed
+      case other => fail(s"unexpected response: $other")
+    }
+  }
+
+  def verifyNotFound(id: String): Unit = {
+    val result = deviceClient.getDevice(id)
+    Await.result(result.value, Duration.Inf) match {
+      case Right(GetDeviceResponse.NotFound(_)) => // Succeed
+      case other => fail(s"unexpected response: $other")
+    }
+  }
+
+  def putPowerGranted(id: String, powerGranted: BigDecimal): Unit = {
+    val result = deviceClient.putPowerGranted(id, powerGranted)
+    Await.result(result.value, Duration.Inf) match {
+      case Right(PutPowerGrantedResponse.NoContent) => // Succeed
+      case other => fail(s"unexpected response: $other")
+    }
+  }
+
+  def getPowerGranted(id: String): BigDecimal = {
+    val result = deviceClient.getPowerGranted(id)
+    Await.result(result.value, Duration.Inf) match {
+      case Right(GetPowerGrantedResponse.OK(value)) => value
+      case other => fail(s"unexpected response: $other")
+    }
+  }
+
+  def putPowerAccepted(id: String, powerGranted: BigDecimal): Unit = {
+    val result = deviceClient.putPowerAccepted(id, powerGranted)
+    Await.result(result.value, Duration.Inf) match {
+      case Right(PutPowerAcceptedResponse.NoContent) => // Succeed
+      case other => fail(s"unexpected response: $other")
+    }
+  }
+
+  def getPowerAccepted(id: String): BigDecimal = {
+    val result = deviceClient.getPowerAccepted(id)
+    Await.result(result.value, Duration.Inf) match {
+      case Right(GetPowerAcceptedResponse.OK(value)) => value
       case other => fail(s"unexpected response: $other")
     }
   }

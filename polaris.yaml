@@ -82,6 +82,9 @@ paths:
     get:
       tags:
         - device
+      summary: Gets the device properties
+      description: |
+        Gets the properties of the device as an entity.
       operationId: getDevice
       x-scala-package: device
       parameters:
@@ -106,6 +109,9 @@ paths:
     put:
       tags:
         - device
+      summary: Sets the device properties
+      description: |
+        Sets the properties of the device as an entity.
       operationId: putDevice
       x-scala-package: device
       parameters:
@@ -122,23 +128,51 @@ paths:
               $ref: "#/components/schemas/Device"
       responses:
         "204":
-          description: Update successful, no content returned
+          description: Update successful. No content returned.
         "400":
-          description: Invalid request
+          description: Invalid request. The content provides additional details.
           content:
             text/plain:
               schema:
                 type: string
         "404":
-          description: Not found - the id does not corresponed to a registered device
+          description: Not found. The id does not corresponed to a registered device
           content:
             text/plain:
               schema:
                 type: string
+    delete:
+      tags:
+        - device
+      summary: Deletes the device
+      description: |
+        Removes the device from the table of devices known to the controller.
+      operationId: deleteDevice
+      x-scala-package: device
+      parameters:
+        - name: id
+          in: path
+          schema:
+            type: string
+          required: true
+      responses:
+        "204":
+          description: Delete successful. There is no content in the result.
+        "404":
+          description: Not found. The id does not corresponed to a known device.
+          content:
+            text/plain:
+              schema:
+                type: string
+
   /devices/{id}/powerGranted:
     get:
       tags:
         - device
+      summary: Gets the power granted to the device
+      description: |
+        A device observes this value to know how much of its requested power
+        has been granted by the microgrid for it to consume.
       operationId: getPowerGranted
       x-scala-package: device
       parameters:
@@ -153,7 +187,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PowerGranted"
+                $ref: "#/components/schemas/PowerValue"
         "404":
           description: Not found - the id does not corresponed to a registered device
           content:
@@ -164,6 +198,10 @@ paths:
       tags:
         - device
       operationId: putPowerGranted
+      summary: Sets the power granted to the device
+      description: |
+        The grid controller sets this value to let the device know how much of its requested power
+        has been granted by the microgrid for it to consume.
       x-scala-package: device
       parameters:
         - name: id
@@ -176,7 +214,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/PowerGranted"
+              $ref: "#/components/schemas/PowerValue"
       responses:
         "204":
           description: Update successful, no content returned
@@ -187,7 +225,73 @@ paths:
               schema:
                 type: string
         "404":
+          description: Not found - the id does not corresponed to a known device
+          content:
+            text/plain:
+              schema:
+                type: string
+  /devices/{id}/powerAccepted:
+    get:
+      tags:
+        - device
+      summary: Gets the power that the microgrid has accepted
+      description: |
+        A power sourcing device observes this value to know how much of
+        the power that it offered to the microgrid
+        has been accepted by the microgrid.
+      operationId: getPowerAccepted
+      x-scala-package: device
+      parameters:
+        - name: id
+          in: path
+          schema:
+            type: string
+          required: true
+      responses:
+        "200":
+          description: Get successful
+          content:
+            application/json:
+              schema:
+                type: number
+        "404":
           description: Not found - the id does not corresponed to a registered device
+          content:
+            text/plain:
+              schema:
+                type: string
+    put:
+      tags:
+        - device
+      operationId: putPowerAccepted
+      summary: Sets the power accepted by the microgrid
+      description: |
+        The grid controller sets this value to let the device know how much of its offered power
+        has been accepted by the microgrid.
+      x-scala-package: device
+      parameters:
+        - name: id
+          in: path
+          schema:
+            type: string
+          required: true
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: number
+      responses:
+        "204":
+          description: Update successful, no content returned
+        "400":
+          description: Invalid request
+          content:
+            text/plain:
+              schema:
+                type: string
+        "404":
+          description: Not found - the id does not corresponed to a known device
           content:
             text/plain:
               schema:
@@ -271,9 +375,12 @@ components:
           type: string
         powerRequested:
           type: number
-          description: the power that the device needs in watts to perform its primary function
-    PowerGranted:
-      description: the power that the device has been granted in watts
+          description: the power in whats that the device needs to perform its primary function
+        powerOffered:
+          type: number
+          description: the power in watts that the device has available to supply the microgrid
+    PowerValue:
+      description: power in watts accepted, granted or consumed
       type: number
     Subscription:
       type: object

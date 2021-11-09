@@ -1,11 +1,10 @@
 package org.opendcgrid.app.polaris.subscription
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
 import org.opendcgrid.app.polaris.definitions.{Notification, Subscription}
 import org.opendcgrid.app.polaris.notification.{NotificationClient, PostNotificationResponse}
-import org.opendcgrid.app.polaris.{HTTPError, PolarisHandler}
+import org.opendcgrid.app.polaris.{PolarisError, PolarisHandler}
 
 import java.util.UUID
 import scala.collection.mutable
@@ -49,7 +48,7 @@ class PolarisSubscriptionHandler(implicit system: ActorSystem, requester: HttpRe
     if (subscriptions.contains(id)) {
       subscriptions.remove(id)
       Future.successful(respond.NoContent)
-    } else Future.successful(respond.NotFound(HTTPError.NotFound(id).message))
+    } else Future.successful(respond.NotFound(PolarisError.NotFound(id).message))
 
   }
 

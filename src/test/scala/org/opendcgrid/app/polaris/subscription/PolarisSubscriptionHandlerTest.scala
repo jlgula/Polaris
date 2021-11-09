@@ -41,7 +41,6 @@ class PolarisSubscriptionHandlerTest extends AnyFunSuite {
   }
 
   test("Observation performance") {
-    import scala.jdk.CollectionConverters
     val fixture = new TestFixture
     implicit val ec: ExecutionContext = fixture.context
     val powerGranted = BigDecimal(10.0)
