@@ -1,14 +1,13 @@
 package org.opendcgrid.app.polaris.server.device
 
-import org.opendcgrid.app.polaris.{PolarisError, PolarisHandler}
+import akka.http.scaladsl.model.Uri
+import io.circe.syntax._
 import org.opendcgrid.app.polaris.server.definitions.{Device, Notification}
 import org.opendcgrid.app.polaris.server.subscription.{NotificationAction, PolarisSubscriptionHandler}
+import org.opendcgrid.app.polaris.{PolarisError, PolarisHandler}
 
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
-import akka.http.scaladsl.model.Uri
-import io.circe.syntax._
-import org.opendcgrid.app.polaris.server.definitions.Device
 
 
 class PolarisDeviceHandler(val uri: Uri, val subscriptionHandler: PolarisSubscriptionHandler)(implicit context: ExecutionContext) extends DeviceHandler with PolarisHandler {
