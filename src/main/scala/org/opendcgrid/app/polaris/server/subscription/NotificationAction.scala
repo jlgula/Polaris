@@ -1,4 +1,4 @@
-package org.opendcgrid.app.polaris.subscription
+package org.opendcgrid.app.polaris.server.subscription
 
 sealed abstract class NotificationAction(val value: String)
 object NotificationAction {

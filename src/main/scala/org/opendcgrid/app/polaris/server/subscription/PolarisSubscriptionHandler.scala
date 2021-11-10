@@ -1,9 +1,13 @@
-package org.opendcgrid.app.polaris.subscription
+package org.opendcgrid.app.polaris.server.subscription
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
-import org.opendcgrid.app.polaris.definitions.{Notification, Subscription}
-import org.opendcgrid.app.polaris.notification.{NotificationClient, PostNotificationResponse}
+import org.opendcgrid.app.polaris.server.notification.PostNotificationResponse
+//import org.opendcgrid.app.polaris.client.definitions.Notification
+//import org.opendcgrid.app.polaris.client.notification.NotificationResource.PostNotificationResponse
+import org.opendcgrid.app.polaris.server.definitions.Subscription
+import org.opendcgrid.app.polaris.server.definitions.Notification
+import org.opendcgrid.app.polaris.server.notification.NotificationClient
 import org.opendcgrid.app.polaris.{PolarisError, PolarisHandler}
 
 import java.util.UUID
@@ -27,7 +31,8 @@ class PolarisSubscriptionHandler(implicit system: ActorSystem, requester: HttpRe
     val matchingSubscriptions = subscriptions.values.filter(_.observedUrl == notification.observed)
     // Post a notification to all observers and convert the resulting list of futures into a single future of the results.
     // Note that Future.sequence actually runs all the futures in parallel, not in series.
-    Future.sequence(matchingSubscriptions.map(subscription => clients(subscription.observerUrl).postNotification(notification)).map(_.value))
+    val x = Future.sequence(matchingSubscriptions.map(subscription => clients(subscription.observerUrl).postNotification(notification)).map(_.value))
+    x
   }
 
 

@@ -2,6 +2,7 @@ package org.opendcgrid.app.polaris
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.Uri
+import org.opendcgrid.app.polaris.server.PolarisServer
 
 import java.io.{BufferedReader, PrintStream}
 

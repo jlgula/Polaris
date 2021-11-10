@@ -1,4 +1,4 @@
-package org.opendcgrid.app.polaris.subscription
+package org.opendcgrid.app.polaris.server.subscription
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
@@ -6,14 +6,15 @@ import akka.http.scaladsl.model.{HttpRequest, HttpResponse, Uri}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.stream.Materializer
-import org.opendcgrid.app.pclient.definitions.{Subscription, Device => ClientDevice}
-import org.opendcgrid.app.pclient.device.DeviceClient
-import org.opendcgrid.app.pclient.subscription.SubscriptionClient
+import org.opendcgrid.app.polaris.client.definitions.{Subscription, Device => ClientDevice}
+import org.opendcgrid.app.polaris.client.device.DeviceClient
+import org.opendcgrid.app.polaris.client.subscription.SubscriptionClient
+import org.opendcgrid.app.polaris.client.definitions.{Notification => ClientNotification}
 import org.opendcgrid.app.polaris.PolarisTestUtilities
-import org.opendcgrid.app.polaris.definitions.Notification
-import org.opendcgrid.app.polaris.device.{DeviceResource, PolarisDeviceHandler}
-import org.opendcgrid.app.polaris.gc.{GcResource, PolarisGCHandler}
-import org.opendcgrid.app.polaris.notification.{NotificationHandler, NotificationResource}
+import org.opendcgrid.app.polaris.server.definitions.Notification
+import org.opendcgrid.app.polaris.server.device.{DeviceResource, PolarisDeviceHandler}
+import org.opendcgrid.app.polaris.server.gc.{GcResource, PolarisGCHandler}
+import org.opendcgrid.app.polaris.client.notification.{NotificationHandler, NotificationResource}
 import org.scalatest.funsuite.AnyFunSuite
 
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -57,7 +58,7 @@ class PolarisSubscriptionHandlerTest extends AnyFunSuite {
 class TestNotificationHandler extends NotificationHandler() {
   import io.circe.parser.decode
   val observations = new ConcurrentLinkedQueue[BigDecimal]()
-  override def postNotification(respond: NotificationResource.PostNotificationResponse.type)(body: Notification): Future[NotificationResource.PostNotificationResponse] = {
+  override def postNotification(respond: NotificationResource.PostNotificationResponse.type)(body: ClientNotification): Future[NotificationResource.PostNotificationResponse] = {
     decode[BigDecimal](body.value) match {
       case Right(bigNum) => observations.add(bigNum)
       case Left(error) => throw new IllegalStateException(s"postNotification - unexpected result: $error")

@@ -1,10 +1,10 @@
-package org.opendcgrid.app.pclient
+package org.opendcgrid.app.polaris.client
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
-import org.opendcgrid.app.pclient.definitions.Device
-import org.opendcgrid.app.pclient.device.{DeviceClient, ListDevicesResponse}
+import org.opendcgrid.app.polaris.client.definitions.Device
+import org.opendcgrid.app.polaris.client.device.{DeviceClient, ListDevicesResponse}
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContextExecutor, Future}

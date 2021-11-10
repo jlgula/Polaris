@@ -5,10 +5,10 @@ version := "0.1"
 scalaVersion := "2.13.6"
 
 Compile / guardrailTasks := List(
-  ScalaServer(file("polaris.yaml"), pkg="org.opendcgrid.app.polaris"),
-  ScalaClient(file("polaris.yaml"), pkg="org.opendcgrid.app.pclient"),
-  ScalaServer(file("notification.yaml"), pkg="org.opendcgrid.app.polaris"),
-  ScalaClient(file("notification.yaml"), pkg="org.opendcgrid.app.polaris"),
+  ScalaServer(file("polaris.yaml"), pkg="org.opendcgrid.app.polaris.server"),
+  ScalaClient(file("polaris.yaml"), pkg="org.opendcgrid.app.polaris.client"),
+  ScalaServer(file("notification.yaml"), pkg="org.opendcgrid.app.polaris.client"),
+  ScalaClient(file("notification.yaml"), pkg="org.opendcgrid.app.polaris.server"),
 )
 
 val AkkaVersion = "2.6.15"

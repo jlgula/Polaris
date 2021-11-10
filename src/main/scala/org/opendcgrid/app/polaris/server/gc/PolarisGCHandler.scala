@@ -1,4 +1,4 @@
-package org.opendcgrid.app.polaris.gc
+package org.opendcgrid.app.polaris.server.gc
 
 import org.opendcgrid.app.polaris.PolarisHandler
 

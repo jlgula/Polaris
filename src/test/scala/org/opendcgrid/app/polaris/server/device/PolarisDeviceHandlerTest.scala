@@ -1,4 +1,4 @@
-package org.opendcgrid.app.polaris.device
+package org.opendcgrid.app.polaris.server.device
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
@@ -6,12 +6,12 @@ import akka.http.scaladsl.model.{HttpRequest, HttpResponse, Uri}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.ScalatestRouteTest
-import org.opendcgrid.app.pclient.definitions.{Device => ClientDevice}
-import org.opendcgrid.app.pclient.device.{AddDeviceResponse, DeleteDeviceResponse, DeviceClient, GetDeviceResponse, GetPowerAcceptedResponse, GetPowerGrantedResponse, ListDevicesResponse, PutDeviceResponse, PutPowerAcceptedResponse, PutPowerGrantedResponse}
-import org.opendcgrid.app.pclient.gc.{GcClient, ResetResponse}
+import org.opendcgrid.app.polaris.client.definitions.{Device => ClientDevice}
+import org.opendcgrid.app.polaris.client.device.{AddDeviceResponse, DeleteDeviceResponse, DeviceClient, GetDeviceResponse, GetPowerAcceptedResponse, GetPowerGrantedResponse, ListDevicesResponse, PutDeviceResponse, PutPowerAcceptedResponse, PutPowerGrantedResponse}
+import org.opendcgrid.app.polaris.client.gc.{GcClient, ResetResponse}
 import org.opendcgrid.app.polaris.PolarisTestUtilities
-import org.opendcgrid.app.polaris.gc.{GcResource, PolarisGCHandler}
-import org.opendcgrid.app.polaris.subscription.PolarisSubscriptionHandler
+import org.opendcgrid.app.polaris.server.gc.{GcResource, PolarisGCHandler}
+import org.opendcgrid.app.polaris.server.subscription.PolarisSubscriptionHandler
 import org.scalatest.funsuite.AnyFunSuite
 
 import scala.concurrent.{Await, Future}
