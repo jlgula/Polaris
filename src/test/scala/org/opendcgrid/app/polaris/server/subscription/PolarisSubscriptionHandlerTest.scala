@@ -11,7 +11,6 @@ import org.opendcgrid.app.polaris.client.device.DeviceClient
 import org.opendcgrid.app.polaris.client.subscription.SubscriptionClient
 import org.opendcgrid.app.polaris.client.definitions.{Notification => ClientNotification}
 import org.opendcgrid.app.polaris.PolarisTestUtilities
-import org.opendcgrid.app.polaris.server.definitions.Notification
 import org.opendcgrid.app.polaris.server.device.{DeviceResource, PolarisDeviceHandler}
 import org.opendcgrid.app.polaris.server.gc.{GcResource, PolarisGCHandler}
 import org.opendcgrid.app.polaris.client.notification.{NotificationHandler, NotificationResource}
