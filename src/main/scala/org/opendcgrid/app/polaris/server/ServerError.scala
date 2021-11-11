@@ -1,0 +1,9 @@
+package org.opendcgrid.app.polaris.server
+
+sealed abstract class ServerError(val message: String) extends Throwable(message)
+object ServerError {
+  case object Timeout extends ServerError("timeout")
+  case object Interrupted extends ServerError("timeout")
+  case object NotStarted extends ServerError("server not started")
+
+}
