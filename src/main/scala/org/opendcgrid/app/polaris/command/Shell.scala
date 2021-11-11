@@ -1,6 +1,6 @@
-package org.opendcgrid.app.polaris
+package org.opendcgrid.app.polaris.command
 
-import org.opendcgrid.app.polaris.command.{Command, CommandContext, CommandError, CommandResponse, DevicesCommand, ExitCommand, HelpCommand, NullCommand, Parsable, ServerCommand, VersionCommand}
+import org.opendcgrid.app.polaris.AppContext
 
 import java.io.{BufferedReader, InputStream, InputStreamReader, OutputStream, PrintStream}
 import scala.util.{Failure, Success, Try}

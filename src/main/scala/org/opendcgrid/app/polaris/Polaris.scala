@@ -1,7 +1,7 @@
 package org.opendcgrid.app.polaris
 
 import org.opendcgrid.app.polaris.PolarisAppOptionTag.{Client, DevicesOption, Log, Server, Shell}
-import org.opendcgrid.app.polaris.command.{Command, CommandError, DevicesCommand, HelpCommand, ServerCommand, VersionCommand}
+import org.opendcgrid.app.polaris.command.{Command, CommandError, DevicesCommand, HelpCommand, ServerCommand, Shell, ShellConfiguration, VersionCommand}
 import org.opendcgrid.lib.commandoption.StandardCommandOptionTag.{Help, Output, Version}
 import org.opendcgrid.lib.commandoption.{CommandOptionError, CommandOptionResult, StandardCommandOption}
 
@@ -15,7 +15,7 @@ object Polaris extends App {
 }
 
 class Polaris {
-  def options = Seq(Client, DevicesOption, Help, Log, Output, Server, Shell, Version)
+  def options = Seq(Client, DevicesOption, Help, Log, Output, Server, PolarisAppOptionTag.Shell, Version)
 
   /**
    * Runs the application.

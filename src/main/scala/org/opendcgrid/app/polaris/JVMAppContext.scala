@@ -1,6 +1,6 @@
 package org.opendcgrid.app.polaris
 
-import org.opendcgrid.app.polaris.command.CommandError
+import org.opendcgrid.app.polaris.command.{CommandError, ShellConfiguration}
 
 import java.io.IOException
 import java.nio.file.{FileSystems, Files, InvalidPathException}
