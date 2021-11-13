@@ -1,21 +1,28 @@
 package org.opendcgrid.app.polaris
 
-import org.opendcgrid.app.polaris.PolarisAppOptionTag.{Client, DevicesOption, Log, Server, Shell}
-import org.opendcgrid.app.polaris.command.{Command, CommandError, DevicesCommand, HelpCommand, ServerCommand, Shell, ShellConfiguration, VersionCommand}
+import akka.actor.ActorSystem
+import org.opendcgrid.app.polaris.PolarisAppOptionTag.{Client, DevicesOption, Log, Server}
+import org.opendcgrid.app.polaris.command.{Command, CommandError, DevicesCommand, ExitCommand, HelpCommand, Parsable, ServerCommand, VersionCommand}
+import org.opendcgrid.app.polaris.shell.{Shell, ShellConfiguration, ShellContext}
 import org.opendcgrid.lib.commandoption.StandardCommandOptionTag.{Help, Output, Version}
 import org.opendcgrid.lib.commandoption.{CommandOptionError, CommandOptionResult, StandardCommandOption}
+import org.opendcgrid.lib.task.TaskManager
 
 import java.io.{BufferedReader, PrintStream}
-import scala.util.{Failure, Success}
+import scala.concurrent.ExecutionContextExecutor
+import scala.util.{Failure, Success, Try}
 
 object Polaris extends App {
-  val app = new Polaris()
+  val app = new Polaris(new JVMAppContext())
   val result = app.run(this.args.toIndexedSeq, Console.in, Console.out, Console.err)
   System.exit(result)
 }
 
-class Polaris {
+class Polaris(context: AppContext) {
+  implicit val actorSystem: ActorSystem = ActorSystem()
+  implicit val executionContext: ExecutionContextExecutor = actorSystem.dispatcher
   def options = Seq(Client, DevicesOption, Help, Log, Output, Server, PolarisAppOptionTag.Shell, Version)
+  private val tm = new TaskManager
 
   /**
    * Runs the application.
@@ -42,25 +49,23 @@ class Polaris {
       case _ if result.options.contains(StandardCommandOption.Version) => runShellCommand(VersionCommand(), in, out, err)
       case _ if result.options.contains(PolarisAppOption.Devices) => runShellCommand(DevicesCommand, in, out, err)
       case _ if result.options.contains(PolarisAppOption.Server) => runShellCommand(ServerCommand, in, out, err)
-      case _ if result.values.isEmpty => runShell(in, out, err)
+      case _ if result.options.contains(PolarisAppOption.Shell) => runShell(in, out, err)
+      //case _ if result.values.isEmpty => runShell(in, out, err)
       //case _ => runShellFiles(result.values, result.options, in, out, err)
-      case _ => throw new IllegalStateException("not yet")
+      case _ => 0 // Do nothing throw new IllegalStateException("not yet")
     }
   }
 
 
   private def runShell(in: BufferedReader, out: PrintStream, err: PrintStream): Int = {
     //val isConsole: Boolean = context.isConsole // System.console() fails while running under Intellij
-    val isConsole: Boolean = true // context.isConsole // System.console() fails while running under Intellij
-    val appContext = new JVMAppContext(ShellConfiguration(isConsole))
-    val shell = new Shell(appContext, in, out, err)
+    val shell = new Shell(makeShellContext(), in, out, err)
     shell.run()
     0
   }
 
   private def runShellCommand(command: Command, in: BufferedReader, out: PrintStream, err: PrintStream): Int = {
-    val appContext = new JVMAppContext(ShellConfiguration())
-    val shell = new Shell(appContext, in, out, err)
+     val shell = new Shell(makeShellContext(), in, out, err)
     shell.runCommandAndDisplay(command) match {
       case Success(_) => 0
       case Failure(error: CommandError) => error.exitCode
@@ -79,5 +84,24 @@ class Polaris {
     case e: CommandOptionError.MultiError => CommandError.MultiError(e.errors.map(mapError))
     case e: CommandOptionError.UnrecognizedOption => CommandError.UnsupportedOption(e.optionName)
     case e: CommandOptionError.MissingOptionArgument => CommandError.MissingArgument(e.optionName)
+  }
+
+  private def makeShellContext(): ShellContext = new ShellContext {
+    override def allCommands: Seq[Parsable] = Seq[Parsable](
+      DevicesCommand,
+      ExitCommand,
+      HelpCommand,
+      ServerCommand,
+      VersionCommand
+    )
+
+
+    override def taskManager: TaskManager = tm
+
+    override def writeFile(fileName: String, data: Array[Byte]): Try[Unit] = context.writeFile(fileName, data)
+
+    override def readFile(fileName: String): Try[Array[Byte]] = context.readFile(fileName)
+
+    override def configuration: ShellConfiguration = ShellConfiguration(enablePrompt = true)
   }
 }

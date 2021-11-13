@@ -1,4 +1,4 @@
-package org.opendcgrid.app.polaris.command
+package org.opendcgrid.app.polaris.shell
 
 /**
  * Configuration options for the [[Shell]].

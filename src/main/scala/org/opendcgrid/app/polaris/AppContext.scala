@@ -1,6 +1,7 @@
 package org.opendcgrid.app.polaris
 
-import org.opendcgrid.app.polaris.command.{CommandError, ShellConfiguration}
+import org.opendcgrid.app.polaris.command.CommandError
+import org.opendcgrid.app.polaris.shell.ShellConfiguration
 
 import scala.util.{Failure, Try}
 /**
@@ -25,12 +26,6 @@ trait AppContext {
    * @return a [[Try]] of the contents of the file as a byte array or a [[Failure]] wrapping a [[CommandError]]
    */
   def readFile(fileName: String): Try[Array[Byte]]
-
-  /**
-   *
-   * @return the [[ShellConfiguration]] that the shell should use
-   */
-  def configuration: ShellConfiguration
 }
 
 class GenericAppContext(val configuration: ShellConfiguration = ShellConfiguration()) extends AppContext {
@@ -38,4 +33,5 @@ class GenericAppContext(val configuration: ShellConfiguration = ShellConfigurati
   override def writeFile(fileName: String, data: Array[Byte]): Try[Unit] = Failure(CommandError.UnsupportedOperation("file write"))
 
   override def readFile(fileName: String): Try[Array[Byte]] = Failure(CommandError.UnsupportedOperation("file read"))
+
 }

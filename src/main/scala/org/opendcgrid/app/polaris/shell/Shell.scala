@@ -1,6 +1,7 @@
-package org.opendcgrid.app.polaris.command
+package org.opendcgrid.app.polaris.shell
 
-import org.opendcgrid.app.polaris.AppContext
+import org.opendcgrid.app.polaris.command.{Command, CommandContext, CommandError, CommandResponse, ExitCommand, NullCommand, Parsable}
+import org.opendcgrid.lib.task.TaskManager
 
 import java.io.{BufferedReader, InputStream, InputStreamReader, OutputStream, PrintStream}
 import scala.util.{Failure, Success, Try}
@@ -11,7 +12,7 @@ object Shell {
   val appTag = "polaris"
   val defaultScheme = "sim"
 
-  def apply(context: AppContext, input: InputStream, output: OutputStream, error: OutputStream): Shell = {
+  def apply(context: ShellContext, input: InputStream, output: OutputStream, error: OutputStream): Shell = {
     val reader = new BufferedReader(new InputStreamReader(input))
     val writer = new PrintStream(output)
     val errorWriter = new PrintStream(error)
@@ -21,19 +22,12 @@ object Shell {
   def formatError(error: CommandError): String = s"$appTag: ${error.getMessage}\n"
 }
 
-class Shell(val context: AppContext, val reader: BufferedReader, val writer: PrintStream, val errorWriter: PrintStream) extends CommandContext {
+class Shell(val context: ShellContext, val reader: BufferedReader, val writer: PrintStream, val errorWriter: PrintStream) extends CommandContext {
   import org.opendcgrid.app.polaris.command.CommandResponse._
-  val allCommands: Seq[Parsable] = Seq[Parsable](
-    DevicesCommand,
-    ExitCommand,
-    HelpCommand,
-    ServerCommand,
-    VersionCommand
-  )
 
-  def configuration: ShellConfiguration = context.configuration
+  //def configuration: ShellConfiguration = context.configuration
 
-  def run(reader: BufferedReader = this.reader, prompt: Boolean = configuration.enablePrompt): Int = {
+  def run(reader: BufferedReader = this.reader, prompt: Boolean = context.configuration.enablePrompt): Int = {
     var running: Boolean = true
     var exitCode: Int = 0
     while(running) {
@@ -122,6 +116,9 @@ class Shell(val context: AppContext, val reader: BufferedReader, val writer: Pri
 
   //def writeFile(fileName: String, data: Array[Byte]): Try[Unit] = context.writeFile(fileName, data)
 
+  override def taskManager: TaskManager = context.taskManager
+
+  override def allCommands: Seq[Parsable] = context.allCommands
 }
 
 

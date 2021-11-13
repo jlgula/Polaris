@@ -1,6 +1,6 @@
-package org.opendcgrid.app.polaris.command
+package org.opendcgrid.app.polaris.shell
 
-import org.opendcgrid.app.polaris.GenericAppContext
+import org.opendcgrid.app.polaris.command.{Command, CommandError, CommandResponse}
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import scala.util.Try
@@ -19,27 +19,6 @@ class ShellTest extends org.scalatest.funsuite.AnyFunSuite {
     runTest("foo\n", expectedError = s"${Shell.appTag}: ${CommandError.InvalidCommand("foo").message}\n")
   }
 
-
-/*
-  test("Command.parseDeviceType") {
-    //val result = Command.parseDeviceType("foo")
-    //assertResult(Success(Command.DeviceTypeParse("foo", Protocol.SimProtocol)))(result)
-    Command.parseDeviceType("foo:80") match {
-      case Success(DeviceTypeParse("foo", HTTPProtocol(80))) =>
-      case other => fail(s"failed parse with $other")
-    }
-    Command.parseDeviceType("foo:http:80") match {
-      case Success(DeviceTypeParse("foo", HTTPProtocol(80))) =>
-      case other => fail(s"failed parse with $other")
-    }
-    Command.parseDeviceType("foo:http:bar") match {
-      case Success(value) => fail(s"expected failure but got Success($value)")
-      case other => // Silently succeed
-    }
-  }
-
- */
-
   def runShellCommand(shell: Shell, commandLine: String): Try[CommandResponse] = {
     val command = shell.parse(commandLine)
     assert(command.isSuccess)
@@ -52,7 +31,7 @@ class ShellTest extends org.scalatest.funsuite.AnyFunSuite {
     val in = new ByteArrayInputStream(input.getBytes)
     val output = new ByteArrayOutputStream()
     val error = new ByteArrayOutputStream()
-    val shell = Shell(new GenericAppContext(configuration), in, output, error)
+    val shell = Shell(new GenericShellContext(configuration), in, output, error)
     val result = shell.runCommandAndDisplay(command)
     val actualOutput = new String(output.toByteArray)
     val actualError = new String(error.toByteArray)
@@ -65,7 +44,7 @@ class ShellTest extends org.scalatest.funsuite.AnyFunSuite {
     val in = new ByteArrayInputStream(input.getBytes)
     val output = new ByteArrayOutputStream()
     val error = new ByteArrayOutputStream()
-    val sample = Shell(new GenericAppContext(configuration), in, output, error)
+    val sample = Shell(new GenericShellContext(configuration), in, output, error)
     val result = sample.run()
     assertResult(expectedExitCode)(result)
     val actualOutput = new String(output.toByteArray)

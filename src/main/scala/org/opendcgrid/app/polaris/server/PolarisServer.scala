@@ -7,15 +7,15 @@ import akka.http.scaladsl.server.Directives._
 import org.opendcgrid.app.polaris.server.device.{DeviceResource, PolarisDeviceHandler}
 import org.opendcgrid.app.polaris.server.gc.{GcResource, PolarisGCHandler}
 import org.opendcgrid.app.polaris.server.subscription.{PolarisSubscriptionHandler, SubscriptionResource}
+import org.opendcgrid.lib.task.{Task, TaskID, TaskManager}
 
-import java.util.concurrent.Semaphore
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, ExecutionContext, Future, TimeoutException}
-import scala.util.{Failure, Success, Try}
+import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 
-class PolarisServer(uri: Uri) (implicit actorSystem: ActorSystem){
-  private var binding: Option[Http.ServerBinding] = None
-  def start(): Try[Unit] = {
+class PolarisServer(uri: Uri, val name: String, taskManager: TaskManager) (implicit actorSystem: ActorSystem) extends Task {
+  implicit val ec: ExecutionContextExecutor = actorSystem.dispatcher
+  @volatile private var binding: Option[Http.ServerBinding] = None
+  def start(): Future[TaskID] = {
     implicit val context: ExecutionContext = actorSystem.dispatcher
     implicit val requester: HttpRequest => Future[HttpResponse] = Http().singleRequest(_)
     val subscriptionHandler = new PolarisSubscriptionHandler
@@ -24,6 +24,12 @@ class PolarisServer(uri: Uri) (implicit actorSystem: ActorSystem){
     val deviceRoutes = DeviceResource.routes(deviceHandler)
     val gcRoutes = GcResource.routes(new PolarisGCHandler(deviceHandler, subscriptionHandler))
     val routes = deviceRoutes ~ gcRoutes ~ subscriptionRoutes
+    val bindingFuture = Http().newServerAt(uri.authority.host.toString(), uri.authority.port).bindFlow(routes)
+    bindingFuture.map { binding =>
+      this.binding = Some(binding)
+      taskManager.startTask(this)
+    }
+    /*
     try {
       val result = Await.result(Http().newServerAt(uri.authority.host.toString(), uri.authority.port).bindFlow(routes), Duration.Inf)
       binding = Some(result)
@@ -33,10 +39,12 @@ class PolarisServer(uri: Uri) (implicit actorSystem: ActorSystem){
       case _: InterruptedException => Failure(ServerError.Interrupted)
     }
 
+     */
+
   }
 
-  def terminate(): Try[Unit] = {
-    if (binding.isDefined) Success(())
-    else Failure(ServerError.NotStarted)
+  def terminate(): Future[Unit] = {
+    if (binding.isDefined) binding.get.terminate(FiniteDuration(1, "seconds")).map(_ => ())
+    else Future.failed(ServerError.NotStarted)
   }
 }
