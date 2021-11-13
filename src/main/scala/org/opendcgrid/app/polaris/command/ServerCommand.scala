@@ -12,15 +12,15 @@ import scala.util.{Failure, Success, Try}
 case object ServerCommand extends Command with Parsable {
   val name = "server"
   val help = "server - start the server"
-  val url: Uri = Uri("http://localhost:8080")
+  val uri: Uri = Uri("http://localhost:8080")
 
   def run(context: CommandContext): Try[CommandResponse] = {
     val taskName = name
     implicit def actorSystem: ActorSystem = ActorSystem()
-    val server = new PolarisServer(url, taskName, context.taskManager)
+    val server = new PolarisServer(uri, taskName, context.taskManager)
     try {
       val taskID = Await.result(server.start(), Duration.Inf)
-      Success(CommandResponse.TaskResponse(taskName, taskID, url.toString()))
+      Success(CommandResponse.TaskResponse(taskName, taskID, uri))
     } catch {
       case _: TimeoutException => Failure(CommandError.ServerError(ServerError.Timeout.getMessage))
       case _: InterruptedException => Failure(CommandError.ServerError(ServerError.Interrupted.getMessage))

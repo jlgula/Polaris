@@ -12,7 +12,7 @@ import org.opendcgrid.lib.task.{Task, TaskID, TaskManager}
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
 
-class PolarisServer(uri: Uri, val name: String, taskManager: TaskManager) (implicit actorSystem: ActorSystem) extends Task {
+class PolarisServer(val uri: Uri, val name: String, taskManager: TaskManager) (implicit actorSystem: ActorSystem) extends Task {
   implicit val ec: ExecutionContextExecutor = actorSystem.dispatcher
   @volatile private var binding: Option[Http.ServerBinding] = None
   def start(): Future[TaskID] = {
@@ -29,18 +29,6 @@ class PolarisServer(uri: Uri, val name: String, taskManager: TaskManager) (impli
       this.binding = Some(binding)
       taskManager.startTask(this)
     }
-    /*
-    try {
-      val result = Await.result(Http().newServerAt(uri.authority.host.toString(), uri.authority.port).bindFlow(routes), Duration.Inf)
-      binding = Some(result)
-      Success(())
-    } catch {
-      case _: TimeoutException => Failure(ServerError.Timeout)
-      case _: InterruptedException => Failure(ServerError.Interrupted)
-    }
-
-     */
-
   }
 
   def terminate(): Future[Unit] = {

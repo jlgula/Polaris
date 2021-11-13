@@ -26,6 +26,8 @@ class TaskManager(implicit ec: ExecutionContext) {
 
   def terminateTask(id: TaskID): Future[Unit] = tasks(id).terminate()
 
+  def getTask(id: TaskID): Option[Task] = tasks.get(id)
+
   def listTasks: Map[TaskID, Task] = tasks.toMap
 
   def waitForComplete(): Unit = waitSemaphore.acquire()

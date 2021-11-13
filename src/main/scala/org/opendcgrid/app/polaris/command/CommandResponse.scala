@@ -1,5 +1,6 @@
 package org.opendcgrid.app.polaris.command
 
+import akka.http.scaladsl.model.Uri
 import org.opendcgrid.lib.task.TaskID
 
 sealed abstract class CommandResponse(val message: String) {
@@ -17,5 +18,5 @@ object CommandResponse {
 
   case class VersionResponse(version: String) extends CommandResponse(version)
 
-  case class TaskResponse(name: String, id: TaskID, url: String) extends CommandResponse(s"$name running at $url as task $id")
+  case class TaskResponse(name: String, id: TaskID, uri: Uri) extends CommandResponse(s"$name running at $uri as task $id")
 }

@@ -14,9 +14,9 @@ class ServerCommandTest extends org.scalatest.funsuite.AnyFunSuite {
     val result = command.run(context)
     result match {
       case Failure(error) => fail(error.getMessage)
-      case Success(CommandResponse.TaskResponse(name, id, url)) =>
+      case Success(CommandResponse.TaskResponse(name, id, uri)) =>
         assertResult(ServerCommand.name)(name)
-        assertResult(ServerCommand.url.toString())(url)
+        assertResult(ServerCommand.uri)(uri)
         Await.result(context.taskManager.terminateTask(id), Duration.Inf)
       case Success(other) => fail(s"Unexpected response: $other")
     }
