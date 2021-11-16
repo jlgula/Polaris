@@ -48,7 +48,7 @@ class Polaris(context: AppContext) {
       case _ if result.options.contains(StandardCommandOption.Help) => runShellCommand(HelpCommand(Nil), in, out, err)
       case _ if result.options.contains(StandardCommandOption.Version) => runShellCommand(VersionCommand(), in, out, err)
       case _ if result.options.contains(PolarisAppOption.Devices) => runShellCommand(DevicesCommand, in, out, err)
-      case _ if result.options.contains(PolarisAppOption.Server) => runShellCommand(ServerCommand, in, out, err)
+      case _ if result.options.contains(PolarisAppOption.Server) => runShellCommand(ServerCommand(), in, out, err)
       case _ if result.options.contains(PolarisAppOption.Shell) => runShell(in, out, err)
       //case _ if result.values.isEmpty => runShell(in, out, err)
       //case _ => runShellFiles(result.values, result.options, in, out, err)
@@ -56,6 +56,8 @@ class Polaris(context: AppContext) {
     }
   }
 
+
+  //private def runServer(result: CommandOptionResult): Int
 
   private def runShell(in: BufferedReader, out: PrintStream, err: PrintStream): Int = {
     //val isConsole: Boolean = context.isConsole // System.console() fails while running under Intellij

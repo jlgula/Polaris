@@ -5,5 +5,6 @@ object ServerError {
   case object Timeout extends ServerError("timeout")
   case object Interrupted extends ServerError("timeout")
   case object NotStarted extends ServerError("server not started")
+  case class BindingError(details: String) extends ServerError(s"binding failed: $details")
 
 }

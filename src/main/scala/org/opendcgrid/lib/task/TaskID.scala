@@ -12,6 +12,8 @@ object TaskID {
   }
 }
 
-case class TaskID(value: Int) {
+case class TaskID(value: Int) extends Comparable[TaskID] {
   override def toString: String = s"$value"
+
+  override def compareTo(other: TaskID): Int = value.compareTo(other.value)
 }

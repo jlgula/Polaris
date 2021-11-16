@@ -11,6 +11,7 @@ import org.opendcgrid.lib.task.{Task, TaskID, TaskManager}
 
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
+import scala.util.{Failure, Success, Try}
 
 class PolarisServer(val uri: Uri, val name: String, taskManager: TaskManager) (implicit actorSystem: ActorSystem) extends Task {
   implicit val ec: ExecutionContextExecutor = actorSystem.dispatcher
@@ -25,10 +26,17 @@ class PolarisServer(val uri: Uri, val name: String, taskManager: TaskManager) (i
     val gcRoutes = GcResource.routes(new PolarisGCHandler(deviceHandler, subscriptionHandler))
     val routes = deviceRoutes ~ gcRoutes ~ subscriptionRoutes
     val bindingFuture = Http().newServerAt(uri.authority.host.toString(), uri.authority.port).bindFlow(routes)
+    /*
     bindingFuture.map { binding =>
       this.binding = Some(binding)
       taskManager.startTask(this)
     }
+
+     */
+    bindingFuture.transform[TaskID] { b: Try[Http.ServerBinding] => b match {
+      case Success(binding) =>  this.binding = Some(binding); Success(taskManager.startTask(this))
+      case Failure(error) => Failure(error)
+    }}
   }
 
   def terminate(): Future[Unit] = {

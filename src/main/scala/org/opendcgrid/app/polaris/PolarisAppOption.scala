@@ -10,6 +10,7 @@ object PolarisAppOptionTag {
   case object Log extends OneArgumentTag(PolarisAppOption.Log.apply, "log")
   case object Server extends ZeroArgumentTag(PolarisAppOption.Server, "server")
   case object Shell extends ZeroArgumentTag(PolarisAppOption.Shell, "shell")
+  case object Port extends OneArgumentTag(PolarisAppOption.Port.apply, "port")
 }
 
 object PolarisAppOption {
@@ -30,6 +31,15 @@ object PolarisAppOption {
 
   case class Log(level: String) extends CommandOption
 
+  case object Port {
+    def unapply(result: CommandOptionResult): Option[Port] = result.options.collectFirst { case o: Port => o }
+  }
+
+  /**
+   * [[CommandOption]] for the port used by the server command.
+   * @param value the localhost port number that the server will use
+   */
+  case class Port(value: String) extends CommandOption
 
   /**
    * [[CommandOption]] that indicates that a server should be started.

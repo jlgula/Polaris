@@ -26,29 +26,28 @@ class TaskTest extends org.scalatest.funsuite.AnyFunSuite {
     val getResult2 = manager.getTask(taskID)
     assert(getResult2.isEmpty)
   }
+}
 
-
-  class TestTask(val name: String, val uri: Uri, taskManager: TaskManager) extends Task {
-    private val semaphore = new Semaphore(0)
-    private val completionPromise = Promise[Unit]
-    private val task = this
-    def start(): Future[TaskID] = {
-      val taskID = taskManager.startTask(task)
-      val thread = new Thread {
-        override def run(): Unit = {
-          semaphore.acquire()
-          taskManager.endTask(taskID)
-          completionPromise.success(())
-        }
+class TestTask(val name: String, val uri: Uri, taskManager: TaskManager) extends Task {
+  private val semaphore = new Semaphore(0)
+  private val completionPromise = Promise[Unit]
+  private val task = this
+  def start(): Future[TaskID] = {
+    val taskID = taskManager.startTask(task)
+    val thread = new Thread {
+      override def run(): Unit = {
+        semaphore.acquire()
+        taskManager.endTask(taskID)
+        completionPromise.success(())
       }
-      thread.start()
-      Future.successful(taskID)
     }
-
-    override def terminate(): Future[Unit] = {
-      semaphore.release()
-      completionPromise.future
-    }
+    thread.start()
+    Future.successful(taskID)
   }
 
+  override def terminate(): Future[Unit] = {
+    semaphore.release()
+    completionPromise.future
+  }
 }
+
