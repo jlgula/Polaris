@@ -1,12 +1,13 @@
 package org.opendcgrid.app.polaris.command
 
-import org.opendcgrid.app.polaris.command.CommandTestUtilities.makeShell
+import org.opendcgrid.app.polaris.command.CommandTestUtilities.ShellTestFixture
 
 import scala.util.{Failure, Success}
 
 class VersionCommandTest extends org.scalatest.funsuite.AnyFunSuite {
   test("version command") {
-    val shell = makeShell()
+    val fixture = new ShellTestFixture()
+    val shell = fixture.shell
     val command = VersionCommand.parse(Nil)
     val result = shell.runCommand(command.get)
     result match {
@@ -16,7 +17,8 @@ class VersionCommandTest extends org.scalatest.funsuite.AnyFunSuite {
   }
 
   test("version command verbose") {
-    val shell = makeShell()
+    val fixture = new ShellTestFixture()
+    val shell = fixture.shell
     val command = VersionCommand.parse(Seq("-V"))
     val result = shell.runCommand(command.get)
     result match {

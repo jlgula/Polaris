@@ -2,11 +2,15 @@ package org.opendcgrid.app.polaris
 
 import org.opendcgrid.app.polaris.command.CommandError
 
-import java.io.IOException
+import java.io.{BufferedReader, IOException, PrintStream}
 import java.nio.file.{FileSystems, Files, InvalidPathException}
 import scala.util.{Failure, Success, Try}
 
-class JVMAppContext extends AppContext {
+class JVMAppContext(
+                   val in: BufferedReader = Console.in,
+                   val out: PrintStream = Console.out,
+                   val err: PrintStream = Console.err
+                   ) extends AppContext {
 
   def writeFile(fileName: String, data: Array[Byte]): Try[Unit] = {
     try {

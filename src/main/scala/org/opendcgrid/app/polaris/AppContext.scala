@@ -3,6 +3,7 @@ package org.opendcgrid.app.polaris
 import org.opendcgrid.app.polaris.command.CommandError
 import org.opendcgrid.app.polaris.shell.ShellConfiguration
 
+import java.io.{BufferedReader, PrintStream}
 import scala.util.{Failure, Try}
 /**
  * Top level functions that may or may not be supplied by the platform.
@@ -26,6 +27,21 @@ trait AppContext {
    * @return a [[Try]] of the contents of the file as a byte array or a [[Failure]] wrapping a [[CommandError]]
    */
   def readFile(fileName: String): Try[Array[Byte]]
+
+  /**
+   * @return the [[BufferedReader]] used by the shell, normally stdin
+   */
+  def in: BufferedReader
+
+  /**
+    * @return the [[PrintStream]] used for normal messages, normally stdout
+   */
+  def out: PrintStream
+
+  /**
+   * @return the [[PrintStream]] used for error messages, normally stderr
+   */
+  def err: PrintStream
 }
 
 class GenericAppContext(val configuration: ShellConfiguration = ShellConfiguration()) extends AppContext {
@@ -34,4 +50,9 @@ class GenericAppContext(val configuration: ShellConfiguration = ShellConfigurati
 
   override def readFile(fileName: String): Try[Array[Byte]] = Failure(CommandError.UnsupportedOperation("file read"))
 
+  override def in: BufferedReader = Console.in
+
+  override def out: PrintStream = Console.out
+
+  override def err: PrintStream = Console.err
 }

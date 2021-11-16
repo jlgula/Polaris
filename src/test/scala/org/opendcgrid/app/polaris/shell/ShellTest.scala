@@ -1,8 +1,8 @@
 package org.opendcgrid.app.polaris.shell
 
+import org.opendcgrid.app.polaris.command.CommandTestUtilities.ShellTestFixture
 import org.opendcgrid.app.polaris.command.{Command, CommandError, CommandResponse}
 
-import java.io.{ByteArrayInputStream, ByteArrayOutputStream}
 import scala.util.Try
 
 
@@ -28,28 +28,21 @@ class ShellTest extends org.scalatest.funsuite.AnyFunSuite {
   }
 
   def runCommand(command: Command, input: String = "", expectedOutput: String = "", expectedError: String = "", configuration: ShellConfiguration = ShellConfiguration()): Try[CommandResponse] = {
-    val in = new ByteArrayInputStream(input.getBytes)
-    val output = new ByteArrayOutputStream()
-    val error = new ByteArrayOutputStream()
-    val shell = Shell(new GenericShellContext(configuration), in, output, error)
-    val result = shell.runCommandAndDisplay(command)
-    val actualOutput = new String(output.toByteArray)
-    val actualError = new String(error.toByteArray)
-    assertResult(expectedOutput)(actualOutput)
-    assertResult(expectedError)(actualError)
+    val fixture = new ShellTestFixture(input, configuration)
+    val result = fixture.shell.runCommandAndDisplay(command)
+    assertResult(expectedOutput)(fixture.output)
+    assertResult(expectedError)(fixture.error)
     result
   }
 
+
   def runTest(input: String, expectedOutput: String = "", expectedError: String = "", expectedExitCode: Int = 0, configuration: ShellConfiguration = ShellConfiguration()): Unit = {
-    val in = new ByteArrayInputStream(input.getBytes)
-    val output = new ByteArrayOutputStream()
-    val error = new ByteArrayOutputStream()
-    val sample = Shell(new GenericShellContext(configuration), in, output, error)
-    val result = sample.run()
+    val fixture = new ShellTestFixture(input, configuration)
+    val result = fixture.shell.run()
     assertResult(expectedExitCode)(result)
-    val actualOutput = new String(output.toByteArray)
-    val actualError = new String(error.toByteArray)
-    assertResult(expectedOutput)(actualOutput)
-    assertResult(expectedError)(actualError)
+    assertResult(expectedOutput)(fixture.output)
+    assertResult(expectedError)(fixture.error)
   }
+
+
 }

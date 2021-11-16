@@ -1,18 +1,20 @@
 package org.opendcgrid.app.polaris.shell
 
 import akka.actor.ActorSystem
-import org.opendcgrid.app.polaris.AppContext
-import org.opendcgrid.app.polaris.command.{CommandContext, CommandError, ExitCommand, HelpCommand, Parsable, VersionCommand }
+import org.opendcgrid.app.polaris.JVMAppContext
+import org.opendcgrid.app.polaris.command.{CommandContext, CommandError, DevicesCommand, ExitCommand, HelpCommand, Parsable, ServerCommand, VersionCommand}
 import org.opendcgrid.lib.task.TaskManager
 
+import java.io.{BufferedReader, PrintStream}
 import scala.concurrent.ExecutionContextExecutor
 import scala.util.{Failure, Try}
 
-trait ShellContext extends AppContext with CommandContext {
-  def configuration: ShellConfiguration
-}
-
-class GenericShellContext(val configuration: ShellConfiguration = ShellConfiguration()) extends ShellContext {
+class ShellContext(
+                           val configuration: ShellConfiguration = ShellConfiguration(),
+                           in: BufferedReader = Console.in,
+                           out: PrintStream = Console.out,
+                           err: PrintStream = Console.err,
+                         ) extends JVMAppContext(in, out, err) with CommandContext {
   implicit val actorSystem: ActorSystem = ActorSystem()
   implicit val executionContext: ExecutionContextExecutor = actorSystem.dispatcher
 
@@ -21,8 +23,10 @@ class GenericShellContext(val configuration: ShellConfiguration = ShellConfigura
   override def readFile(fileName: String): Try[Array[Byte]] = Failure(CommandError.UnsupportedOperation("file read"))
 
   override def allCommands: Seq[Parsable] = Seq[Parsable](
-    ExitCommand,  // These are used in basic shell tests.
+    DevicesCommand,
+    ExitCommand,
     HelpCommand,
+    ServerCommand,
     VersionCommand
   )
 

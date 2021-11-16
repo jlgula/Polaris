@@ -3,7 +3,7 @@ package org.opendcgrid.app.polaris.shell
 import org.opendcgrid.app.polaris.command.{Command, CommandContext, CommandError, CommandResponse, ExitCommand, NullCommand, Parsable}
 import org.opendcgrid.lib.task.TaskManager
 
-import java.io.{BufferedReader, InputStream, InputStreamReader, OutputStream, PrintStream}
+import java.io.BufferedReader
 import scala.util.{Failure, Success, Try}
 
 object Shell {
@@ -12,22 +12,17 @@ object Shell {
   val appTag = "polaris"
   val defaultScheme = "sim"
 
-  def apply(context: ShellContext, input: InputStream, output: OutputStream, error: OutputStream): Shell = {
-    val reader = new BufferedReader(new InputStreamReader(input))
-    val writer = new PrintStream(output)
-    val errorWriter = new PrintStream(error)
-    new Shell(context, reader, writer, errorWriter)
+  def apply(context: ShellContext): Shell = {
+    new Shell(context)
   }
 
   def formatError(error: CommandError): String = s"$appTag: ${error.getMessage}\n"
 }
 
-class Shell(val context: ShellContext, val reader: BufferedReader, val writer: PrintStream, val errorWriter: PrintStream) extends CommandContext {
+class Shell(val context: ShellContext) extends CommandContext {
   import org.opendcgrid.app.polaris.command.CommandResponse._
 
-  //def configuration: ShellConfiguration = context.configuration
-
-  def run(reader: BufferedReader = this.reader, prompt: Boolean = context.configuration.enablePrompt): Int = {
+  def run(reader: BufferedReader = context.in, prompt: Boolean = context.configuration.enablePrompt): Int = {
     var running: Boolean = true
     var exitCode: Int = 0
     while(running) {
@@ -42,12 +37,12 @@ class Shell(val context: ShellContext, val reader: BufferedReader, val writer: P
     exitCode
   }
 
-  def runReader(reader: BufferedReader = this.reader, prompt: Boolean): Try[CommandResponse] = {
+  def runReader(reader: BufferedReader = context.in, prompt: Boolean): Try[CommandResponse] = {
     var readerRunning: Boolean = true
     while (readerRunning) {
       if (prompt) {
-        writer.print(Shell.prompt)
-        writer.flush()
+        context.out.print(Shell.prompt)
+        context.out.flush()
       }
       val line = reader.readLine()
       if (line != null) {
@@ -90,18 +85,18 @@ class Shell(val context: ShellContext, val reader: BufferedReader, val writer: P
   }
 
   def showTrace(trace: Seq[String]): Unit = {
-    trace.foreach(errorWriter.println)
-    errorWriter.flush()
+    trace.foreach(context.err.println)
+    context.err.flush()
   }
 
   def showError(error: CommandError): Unit = {
-    errorWriter.print(Shell.formatError(error))
-    errorWriter.flush()
+    context.err.print(Shell.formatError(error))
+    context.err.flush()
   }
 
   def showResponse(response: String): Unit = {
-    writer.print(s"$response\n")
-    writer.flush()
+    context.out.print(s"$response\n")
+    context.out.flush()
   }
 
   def runCommand(command: Command): Try[CommandResponse] = command.run(this)
@@ -111,10 +106,6 @@ class Shell(val context: ShellContext, val reader: BufferedReader, val writer: P
     showResult(result)
     result
   }
-
-  //override def readFile(fileName: String): Try[Array[Byte]] = context.readFile(fileName)
-
-  //def writeFile(fileName: String, data: Array[Byte]): Try[Unit] = context.writeFile(fileName, data)
 
   override def taskManager: TaskManager = context.taskManager
 
