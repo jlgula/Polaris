@@ -1,4 +1,6 @@
 package org.opendcgrid.lib.task
+import org.opendcgrid.app.polaris.server.ServerError
+
 import java.util.concurrent.atomic.AtomicInteger
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -24,7 +26,14 @@ class TaskManager(implicit ec: ExecutionContext) {
     waitSemaphore.release()
   }
 
-  def terminateTask(id: TaskID): Future[Unit] = tasks(id).terminate()
+  def terminateTask(id: TaskID): Future[Unit] = {
+    //tasks(id).terminate()
+
+    if (tasks.contains(id)) tasks(id).terminate()
+    else Future.failed(ServerError.NotFound(id))
+
+
+  }
 
   def getTask(id: TaskID): Option[Task] = tasks.get(id)
 

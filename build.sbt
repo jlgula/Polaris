@@ -4,6 +4,8 @@ version := "0.1"
 
 scalaVersion := "2.13.6"
 
+scalacOptions += "-deprecation"
+
 Compile / guardrailTasks := List(
   ScalaServer(file("polaris.yaml"), pkg="org.opendcgrid.app.polaris.server"),
   ScalaClient(file("polaris.yaml"), pkg="org.opendcgrid.app.polaris.client"),

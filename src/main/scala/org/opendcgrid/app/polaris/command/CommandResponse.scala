@@ -19,4 +19,7 @@ object CommandResponse {
   case class VersionResponse(version: String) extends CommandResponse(version)
 
   case class TaskResponse(name: String, id: TaskID, uri: Uri) extends CommandResponse(s"$name running at $uri as task $id")
+
+  case class HaltResponse(id: TaskID) extends CommandResponse(s"Device halted: $id")
+
 }

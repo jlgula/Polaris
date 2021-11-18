@@ -59,10 +59,10 @@ case class ServerCommand(port: Int = 8080) extends Command {
       val taskID = Await.result(server.start(), Duration.Inf)
       Success(CommandResponse.TaskResponse(taskName, taskID, uri))
     } catch {
-      case _: TimeoutException => Failure(CommandError.ServerError(ServerError.Timeout.getMessage))
-      case _: InterruptedException => Failure(CommandError.ServerError(ServerError.Interrupted.getMessage))
-      case e: BindException => Failure(CommandError.ServerError(ServerError.BindingError(e.getMessage).getMessage))
-      case error: Throwable => println(error); Failure(CommandError.ServerError(error.getMessage))
+      case _: TimeoutException => Failure(CommandError.ServerError(ServerError.Timeout))
+      case _: InterruptedException => Failure(CommandError.ServerError(ServerError.Interrupted))
+      case e: BindException => Failure(CommandError.ServerError(ServerError.BindingError(e.getMessage)))
+      case error: Throwable => throw new IllegalStateException(s"unexpected server error: $error")
     }
   }
 

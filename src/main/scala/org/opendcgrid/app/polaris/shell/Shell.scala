@@ -1,7 +1,6 @@
 package org.opendcgrid.app.polaris.shell
 
-import org.opendcgrid.app.polaris.command.{Command, CommandContext, CommandError, CommandResponse, ExitCommand, NullCommand, Parsable}
-import org.opendcgrid.lib.task.TaskManager
+import org.opendcgrid.app.polaris.command.{Command, CommandError, CommandResponse, ExitCommand, NullCommand}
 
 import java.io.BufferedReader
 import scala.util.{Failure, Success, Try}
@@ -19,7 +18,7 @@ object Shell {
   def formatError(error: CommandError): String = s"$appTag: ${error.getMessage}\n"
 }
 
-class Shell(val context: ShellContext) extends CommandContext {
+class Shell(val context: ShellContext) {
   import org.opendcgrid.app.polaris.command.CommandResponse._
 
   def run(reader: BufferedReader = context.in, prompt: Boolean = context.configuration.enablePrompt): Int = {
@@ -64,7 +63,7 @@ class Shell(val context: ShellContext) extends CommandContext {
     if (parts.isEmpty || parts.head.startsWith("#")) Success(NullCommand)
     else {
       val commandName = parts.head
-      allCommands.find(_.name == commandName) match {
+      context.allCommands.find(_.name == commandName) match {
         case Some(parsable) => parsable.parse(parts.tail)
         case None => Failure(CommandError.InvalidCommand(commandName))
       }
@@ -99,17 +98,13 @@ class Shell(val context: ShellContext) extends CommandContext {
     context.out.flush()
   }
 
-  def runCommand(command: Command): Try[CommandResponse] = command.run(this)
+  def runCommand(command: Command): Try[CommandResponse] = command.run(context)
 
   def runCommandAndDisplay(command: Command): Try[CommandResponse] = {
     val result = runCommand(command)
     showResult(result)
     result
   }
-
-  override def taskManager: TaskManager = context.taskManager
-
-  override def allCommands: Seq[Parsable] = context.allCommands
 }
 
 

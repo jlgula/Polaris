@@ -28,5 +28,16 @@ class ServerCommandTest extends org.scalatest.funsuite.AnyFunSuite {
         Await.result(context.taskManager.terminateTask(id), Duration.Inf)
       case Success(other) => fail(s"Unexpected response: $other")
     }
+    val result2 = DevicesCommand.run(context)
+    result2 match {
+      case Success(CommandResponse.MultiResponse(devices)) => validateDevices(devices)
+      case other => fail(s"unexpected response $other")
+    }
+  }
+
+  def validateDevices(devices: Seq[CommandResponse]): Unit = {
+    val device = devices.collectFirst{ case d: CommandResponse.TaskResponse => d}
+    assert(device.nonEmpty)
+    assertResult(ServerCommand.name)(device.get.name)
   }
 }

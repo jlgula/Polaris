@@ -36,12 +36,16 @@ class Polaris(context: ShellContext) {
   }
 
   private def runConfiguration(result: CommandOptionResult): Int = {
+    // Start server if one is called for on the command line. Otherwise, do nothing.
+    val serverResult = startServer(result)
+    if (serverResult != 0) return serverResult
+
     assert(result.errors.isEmpty)
     result match {
       case _ if result.options.contains(StandardCommandOption.Help) => runShellCommand(HelpCommand(Nil))
       case _ if result.options.contains(StandardCommandOption.Version) => runShellCommand(VersionCommand())
       case _ if result.options.contains(PolarisAppOption.Devices) => runShellCommand(DevicesCommand)
-      case _ if result.options.contains(PolarisAppOption.Server) => runShellCommand(ServerCommand())
+      //case _ if result.options.contains(PolarisAppOption.Server) => runShellCommand(ServerCommand())
       case _ if result.options.contains(PolarisAppOption.Shell) => runShell()
       //case _ if result.values.isEmpty => runShell(in, out, err)
       //case _ => runShellFiles(result.values, result.options, in, out, err)
@@ -54,17 +58,16 @@ class Polaris(context: ShellContext) {
     if (!result.options.contains(PolarisAppOption.Server)) 0
     else {
       ServerCommand.parsePort(result) match {
-        case Failure(e: CommandError) => /* TODO: report error */ e.exitCode
-        case Success(port) => ??? // runShellCommand(ServerCommand(port))
+        case Failure(e: CommandError) => reportAppError(e); e.exitCode
+        case Success(port) => runShellCommand(ServerCommand(port))
         case Failure(other) => throw new IllegalStateException(s"unexpected error: $other")
       }
     }
   }
 
   private def runShell(): Int = {
-    //val isConsole: Boolean = context.isConsole // System.console() fails while running under Intellij
     val shell = new Shell(context)
-    shell.run()
+    shell.run(prompt = true)
     0
   }
 

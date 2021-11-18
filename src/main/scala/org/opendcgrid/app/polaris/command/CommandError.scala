@@ -1,6 +1,7 @@
 package org.opendcgrid.app.polaris.command
 
 import java.io.IOException
+import org.opendcgrid.app.polaris.server.{ServerError => SrvError}
 
 sealed abstract class CommandError(val message: String, val exitCode: Int = 1) extends Throwable(message)
 object CommandError {
@@ -11,8 +12,9 @@ object CommandError {
   case class HTTPRequestFailed(details: String) extends CommandError(s"Request failed. $details")
   case class HTTPErrorResponse(code: Int, reason: Option[String]) extends CommandError(s"Request failed with status: $code. ${reason.getOrElse("No reason provided")}")
   case class InternalError(details: Throwable) extends CommandError(s"Unexpected internal error. ${details.getMessage}")
-  case class InvalidExitCode(value: String, details: Throwable) extends CommandError(s"Invalid exit code $value. ${details.getMessage}")
   case class InvalidCommand(name: String) extends CommandError(s"Command not recognized: $name")
+  case class InvalidDevice(deviceID: String) extends CommandError(s"Invalid device identifier: ${q(deviceID)}")
+  case class InvalidExitCode(value: String, details: Throwable) extends CommandError(s"Invalid exit code $value. ${details.getMessage}")
   case class InvalidJSONValue(value: String, details: String) extends CommandError(s"Invalid JSON code: ${q(value)}. $details")
   case class InvalidOption(value: String) extends CommandError(s"Invalid option: $value")
   case class InvalidParameter(value: String) extends CommandError(s"Invalid parameter: $value")
@@ -30,6 +32,7 @@ object CommandError {
   case class NotFound(thing: String) extends CommandError(s"Not found: $thing")
   case class PortInUse(port: Int) extends CommandError(s"Port number: $port is already in use")
   case class RequestFailed(details: Throwable) extends CommandError(s"Request failed. ${details.getMessage}")
+  case class ServerError(details: SrvError) extends CommandError(s"Server error: ${details.getMessage}")
   case class SocketIOError(socketUrl: String, error: IOException) extends CommandError(s"IOException on socket $socketUrl: ${error.getMessage}")
   case class TracedError(error: CommandError, trace: Seq[String]) extends CommandError(error.getMessage)
   case class UnexpectedParameters(parameters: Seq[String]) extends CommandError(s"Unexpected parameters: ${parameters.mkString(",")}")
@@ -41,7 +44,6 @@ object CommandError {
   case class UnsupportedOption(option: String) extends CommandError(s"Unsupported option: $option")
   case class UnsupportedProtocol(protocol: String) extends CommandError(s"Protocol not supported: $protocol")
   case object Usage extends CommandError("usage - polaris [targetURL | configFile]")
-  case class ServerError(details: String) extends CommandError(s"Server failed: $details")
 
   def q(value: String): String = "\"" + value + "\""
 }
