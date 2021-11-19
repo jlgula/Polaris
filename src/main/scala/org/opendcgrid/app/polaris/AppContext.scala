@@ -42,6 +42,8 @@ trait AppContext {
    * @return the [[PrintStream]] used for error messages, normally stderr
    */
   def err: PrintStream
+
+  def configuration: ShellConfiguration
 }
 
 class GenericAppContext(val configuration: ShellConfiguration = ShellConfiguration()) extends AppContext {

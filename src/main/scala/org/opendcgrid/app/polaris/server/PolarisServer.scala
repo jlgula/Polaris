@@ -16,6 +16,7 @@ import scala.util.{Failure, Success, Try}
 class PolarisServer(val uri: Uri, val name: String, taskManager: TaskManager) (implicit actorSystem: ActorSystem) extends Task {
   implicit val ec: ExecutionContextExecutor = actorSystem.dispatcher
   @volatile private var binding: Option[Http.ServerBinding] = None
+  @volatile private var id: Option[TaskID] = None
   def start(): Future[TaskID] = {
     implicit val context: ExecutionContext = actorSystem.dispatcher
     implicit val requester: HttpRequest => Future[HttpResponse] = Http().singleRequest(_)
@@ -34,13 +35,24 @@ class PolarisServer(val uri: Uri, val name: String, taskManager: TaskManager) (i
 
      */
     bindingFuture.transform[TaskID] { b: Try[Http.ServerBinding] => b match {
-      case Success(binding) =>  this.binding = Some(binding); Success(taskManager.startTask(this))
+      case Success(binding) =>
+        this.binding = Some(binding)
+        val taskID = taskManager.startTask(this)
+        this.id = Some(taskID)
+        Success(taskID)
       case Failure(error) => Failure(error)
     }}
   }
 
   def terminate(): Future[Unit] = {
-    if (binding.isDefined) binding.get.terminate(FiniteDuration(1, "seconds")).map(_ => ())
+    if (binding.isDefined) binding.get.terminate(FiniteDuration(1, "seconds")).flatMap(endTaskWithFuture)
     else Future.failed(ServerError.NotStarted)
+  }
+
+  private def endTaskWithFuture(binding: Http.HttpTerminated): Future[Unit] = {
+    if (id.isDefined) {
+      taskManager.endTask(id.get)
+      Future.successful(())
+    } else Future.failed(ServerError.NotStarted)
   }
 }

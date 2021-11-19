@@ -61,8 +61,12 @@ case class ServerCommand(port: Int = 8080) extends Command {
     } catch {
       case _: TimeoutException => Failure(CommandError.ServerError(ServerError.Timeout))
       case _: InterruptedException => Failure(CommandError.ServerError(ServerError.Interrupted))
-      case e: BindException => Failure(CommandError.ServerError(ServerError.BindingError(e.getMessage)))
-      case error: Throwable => throw new IllegalStateException(s"unexpected server error: $error")
+      //case e: BindException => Failure(CommandError.ServerError(ServerError.BindingError(e.getMessage)))
+      // akka errors are gross..
+      case error: Throwable if error.getCause.isInstanceOf[BindException] => Failure(CommandError.ServerError(ServerError.BindingError(error.getCause.getMessage)))
+      case error: Throwable =>
+        println(error)
+        throw new IllegalStateException(s"unexpected server error: $error")
     }
   }
 

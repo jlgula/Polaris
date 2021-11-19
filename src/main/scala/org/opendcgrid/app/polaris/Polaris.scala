@@ -1,24 +1,51 @@
 package org.opendcgrid.app.polaris
 
+import akka.actor.ActorSystem
 import org.opendcgrid.app.polaris.PolarisAppOptionTag.{Client, DevicesOption, Log, Server}
-import org.opendcgrid.app.polaris.command.{Command, CommandError, DevicesCommand, HelpCommand, ServerCommand, VersionCommand}
-import org.opendcgrid.app.polaris.shell.{Shell, ShellContext}
+import org.opendcgrid.app.polaris.command.{Command, CommandError, DevicesCommand, ExitCommand, HaltCommand, HelpCommand, Parsable, ServerCommand, VersionCommand}
+import org.opendcgrid.app.polaris.shell.{Shell, ShellConfiguration, ShellContext}
 import org.opendcgrid.lib.commandoption.StandardCommandOptionTag.{Help, Output, Version}
 import org.opendcgrid.lib.commandoption.{CommandOptionError, CommandOptionResult, StandardCommandOption}
+import org.opendcgrid.lib.task.TaskManager
 
-import scala.util.{Failure, Success}
+import java.io.{BufferedReader, PrintStream}
+import scala.concurrent.ExecutionContextExecutor
+import scala.util.{Failure, Success, Try}
 
 object Polaris extends App {
-  val app = new Polaris(new ShellContext())
+  val app = new Polaris(new JVMAppContext())
   val result = app.run(this.args.toIndexedSeq)
   System.exit(result)
 }
 
-class Polaris(context: ShellContext) {
-  //implicit val actorSystem: ActorSystem = ActorSystem()
-  //implicit val executionContext: ExecutionContextExecutor = actorSystem.dispatcher
+class Polaris(context: AppContext) extends ShellContext {
+  implicit val actorSystem: ActorSystem = ActorSystem()
+  implicit val executionContext: ExecutionContextExecutor = actorSystem.dispatcher
+  override val taskManager: TaskManager = new TaskManager
+
+  override def allCommands: Seq[Parsable] = Seq[Parsable](
+    DevicesCommand,
+    ExitCommand,
+    HaltCommand,
+    HelpCommand,
+    ServerCommand,
+    VersionCommand
+  )
+
   def options = Seq(Client, DevicesOption, Help, Log, Output, Server, PolarisAppOptionTag.Shell, Version)
-  //private val tm = new TaskManager
+
+  override def writeFile(fileName: String, data: Array[Byte]): Try[Unit] = context.writeFile(fileName, data)
+
+  override def readFile(fileName: String): Try[Array[Byte]] = context.readFile(fileName)
+
+  override def configuration: ShellConfiguration = context.configuration
+
+  override def in: BufferedReader = context.in
+
+  override def out: PrintStream = context.out
+
+  override def err: PrintStream = context.err
+
 
   /**
    * Runs the application.
@@ -66,13 +93,13 @@ class Polaris(context: ShellContext) {
   }
 
   private def runShell(): Int = {
-    val shell = new Shell(context)
+    val shell = new Shell(this)
     shell.run(prompt = true)
     0
   }
 
   private def runShellCommand(command: Command): Int = {
-     val shell = new Shell(context)
+     val shell = new Shell(this)
     shell.runCommandAndDisplay(command) match {
       case Success(_) => 0
       case Failure(error: CommandError) => error.exitCode
@@ -93,30 +120,6 @@ class Polaris(context: ShellContext) {
     case e: CommandOptionError.MissingOptionArgument => CommandError.MissingArgument(e.optionName)
   }
 
-  /*
-  private def makeShellContext(): ShellContext = new ShellContext {
-    override def allCommands: Seq[Parsable] = Seq[Parsable](
-      DevicesCommand,
-      ExitCommand,
-      HelpCommand,
-      ServerCommand,
-      VersionCommand
-    )
 
-    override def taskManager: TaskManager = tm
 
-    override def writeFile(fileName: String, data: Array[Byte]): Try[Unit] = context.writeFile(fileName, data)
-
-    override def readFile(fileName: String): Try[Array[Byte]] = context.readFile(fileName)
-
-    override def configuration: ShellConfiguration = ShellConfiguration(enablePrompt = true)
-
-    override def in: BufferedReader = context.in
-
-    override def out: PrintStream = context.out
-
-    override def err: PrintStream = context.err
-  }
-
-   */
 }

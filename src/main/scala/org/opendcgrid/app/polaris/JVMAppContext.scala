@@ -1,6 +1,7 @@
 package org.opendcgrid.app.polaris
 
 import org.opendcgrid.app.polaris.command.CommandError
+import org.opendcgrid.app.polaris.shell.ShellConfiguration
 
 import java.io.{BufferedReader, IOException, PrintStream}
 import java.nio.file.{FileSystems, Files, InvalidPathException}
@@ -35,4 +36,6 @@ class JVMAppContext(
       case e: IOException => Failure(CommandError.FileIOError(fileName, e.getMessage))
     }
   }
+
+  override def configuration: ShellConfiguration = ShellConfiguration(enablePrompt = true)
 }

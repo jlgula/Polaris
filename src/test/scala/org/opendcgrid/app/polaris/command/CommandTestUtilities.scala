@@ -2,7 +2,7 @@ package org.opendcgrid.app.polaris.command
 
 import akka.actor.ActorSystem
 import org.opendcgrid.app.polaris.PolarisTestFixture
-import org.opendcgrid.app.polaris.shell.{Shell, ShellConfiguration, ShellContext}
+import org.opendcgrid.app.polaris.shell.{Shell, ShellConfiguration}
 import org.opendcgrid.lib.task.TaskManager
 
 import scala.concurrent.ExecutionContextExecutor
@@ -12,8 +12,8 @@ import scala.concurrent.ExecutionContextExecutor
  */
 object CommandTestUtilities {
 
-  class ShellTestFixture(input: String = "", configuration: ShellConfiguration = ShellConfiguration(), context: Option[ShellContext] = None) extends PolarisTestFixture(input, configuration) {
-    val shell: Shell = Shell(shellContext)
+  class ShellTestFixture(input: String = "", configuration: ShellConfiguration = ShellConfiguration()) extends PolarisTestFixture(input, configuration) {
+    val shell: Shell = Shell(this.polaris)
   }
 
   class TestCommandContext(val allCommands: Seq[Parsable] = Nil) extends CommandContext {

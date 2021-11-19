@@ -1,12 +1,8 @@
 package org.opendcgrid.app.polaris
 
-import org.opendcgrid.app.polaris.shell.ShellContext
-
-import java.io.{BufferedReader, ByteArrayInputStream, ByteArrayOutputStream, InputStreamReader, PrintStream}
-
 class PolarisTest extends org.scalatest.funsuite.AnyFunSuite {
   test("minimal") {
-    val app = new Polaris(new ShellContext())
+    val app = new Polaris(new PolarisTestFixture())
     val result = app.run(Nil)
     assertResult(0)(result)
   }

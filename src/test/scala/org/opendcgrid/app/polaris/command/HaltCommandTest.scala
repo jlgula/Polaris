@@ -5,8 +5,6 @@ import org.opendcgrid.app.polaris.command.CommandTestUtilities.TestCommandContex
 import org.opendcgrid.app.polaris.server.ServerError
 import org.opendcgrid.lib.task.TaskID
 
-import scala.concurrent.Await
-import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success}
 
 class HaltCommandTest extends org.scalatest.funsuite.AnyFunSuite {
@@ -32,6 +30,8 @@ class HaltCommandTest extends org.scalatest.funsuite.AnyFunSuite {
       case Success(CommandResponse.MultiResponse(Seq(CommandResponse.HaltResponse(_)))) => // Pass
       case Success(other) => fail(s"Unexpected response: $other")
     }
+    val devicesResult = DevicesCommand.run(context)
+    assertResult(Success(CommandResponse.MultiResponse(Nil)))(devicesResult)
   }
 
   test("halt command invalid id") {
