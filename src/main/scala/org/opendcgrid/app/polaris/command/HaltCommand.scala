@@ -4,7 +4,6 @@ import org.opendcgrid.app.polaris.PolarisAppOptionTag
 import org.opendcgrid.app.polaris.command.Command.parseErrors
 import org.opendcgrid.app.polaris.server.ServerError
 import org.opendcgrid.lib.commandoption.CommandOptionResult
-import org.opendcgrid.lib.task.TaskID
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, Future}
@@ -22,7 +21,7 @@ case object HaltCommand extends Parsable {
       _ <- if (result.values.isEmpty) Failure(CommandError.MissingArgument("deviceName")) else Success(())
     } yield HaltCommand(result.values: _*)
   }
-
+/*
   def parseDevices(values: Seq[String]): Try[Seq[TaskID]] = {
     val deviceTries = values.map(parseDevice)
     val failures = deviceTries.filter(_.isFailure)
@@ -33,6 +32,8 @@ case object HaltCommand extends Parsable {
   def parseDevice(value: String): Try[TaskID] = {
     TaskID.parse(value).recoverWith{ case _ => Failure(CommandError.InvalidDevice(value))}
   }
+
+ */
 }
 
 case class HaltCommand(devices: String*) extends Command {

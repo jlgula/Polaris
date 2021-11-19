@@ -2,7 +2,7 @@ package org.opendcgrid.app.polaris.shell
 
 import org.opendcgrid.app.polaris.AppContext
 import org.opendcgrid.app.polaris.command.{CommandContext, CommandError, Parsable}
-import org.opendcgrid.lib.task.TaskManager
+import org.opendcgrid.app.polaris.device.DeviceManager
 
 import java.io.{BufferedReader, PrintStream}
 import scala.concurrent.ExecutionContextExecutor
@@ -20,7 +20,7 @@ trait ShellContext extends AppContext with CommandContext {
   //implicit val actorSystem: ActorSystem = ActorSystem()
   implicit val executionContext: ExecutionContextExecutor
 
-  override val taskManager: TaskManager
+  override val taskManager: DeviceManager
 
   override def writeFile(fileName: String, data: Array[Byte]): Try[Unit] = Failure(CommandError.UnsupportedOperation("file write"))
 

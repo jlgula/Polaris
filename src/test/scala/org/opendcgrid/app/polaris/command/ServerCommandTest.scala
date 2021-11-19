@@ -2,7 +2,7 @@ package org.opendcgrid.app.polaris.command
 
 import org.opendcgrid.app.polaris.PolarisTestUtilities
 import org.opendcgrid.app.polaris.command.CommandTestUtilities.TestCommandContext
-import org.opendcgrid.lib.task.DeviceDescriptor
+import org.opendcgrid.app.polaris.device.DeviceDescriptor
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration

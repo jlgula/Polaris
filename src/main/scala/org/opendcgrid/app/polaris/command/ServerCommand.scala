@@ -3,10 +3,10 @@ package org.opendcgrid.app.polaris.command
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.Uri
 import org.opendcgrid.app.polaris.command.Command.parseErrors
+import org.opendcgrid.app.polaris.device.DeviceDescriptor
 import org.opendcgrid.app.polaris.server.ServerError
 import org.opendcgrid.app.polaris.{PolarisAppOption, PolarisAppOptionTag}
 import org.opendcgrid.lib.commandoption.CommandOptionResult
-import org.opendcgrid.lib.task.DeviceDescriptor
 
 import java.net.BindException
 import scala.concurrent.duration.Duration

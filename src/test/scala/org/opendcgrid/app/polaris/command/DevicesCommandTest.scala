@@ -3,7 +3,7 @@ package org.opendcgrid.app.polaris.command
 import akka.http.scaladsl.model.Uri
 import org.opendcgrid.app.polaris.PolarisTestUtilities
 import org.opendcgrid.app.polaris.command.CommandTestUtilities.TestCommandContext
-import org.opendcgrid.lib.task.DeviceDescriptor
+import org.opendcgrid.app.polaris.device.DeviceDescriptor
 
 import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration.Duration

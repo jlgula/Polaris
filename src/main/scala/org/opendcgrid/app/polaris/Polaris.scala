@@ -3,10 +3,10 @@ package org.opendcgrid.app.polaris
 import akka.actor.ActorSystem
 import org.opendcgrid.app.polaris.PolarisAppOptionTag.{Client, DevicesOption, Log, Server}
 import org.opendcgrid.app.polaris.command.{Command, CommandError, DevicesCommand, ExitCommand, HaltCommand, HelpCommand, Parsable, ServerCommand, VersionCommand}
+import org.opendcgrid.app.polaris.device.DeviceManager
 import org.opendcgrid.app.polaris.shell.{Shell, ShellConfiguration, ShellContext}
 import org.opendcgrid.lib.commandoption.StandardCommandOptionTag.{Help, Output, Version}
 import org.opendcgrid.lib.commandoption.{CommandOptionError, CommandOptionResult, StandardCommandOption}
-import org.opendcgrid.lib.task.TaskManager
 
 import java.io.{BufferedReader, PrintStream}
 import scala.concurrent.ExecutionContextExecutor
@@ -21,7 +21,7 @@ object Polaris extends App {
 class Polaris(context: AppContext) extends ShellContext {
   implicit val actorSystem: ActorSystem = ActorSystem()
   implicit val executionContext: ExecutionContextExecutor = actorSystem.dispatcher
-  override val taskManager: TaskManager = new TaskManager
+  override val taskManager: DeviceManager = new DeviceManager
 
   override def allCommands: Seq[Parsable] = Seq[Parsable](
     DevicesCommand,

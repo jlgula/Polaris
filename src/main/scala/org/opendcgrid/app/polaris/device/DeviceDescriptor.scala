@@ -1,4 +1,4 @@
-package org.opendcgrid.lib.task
+package org.opendcgrid.app.polaris.device
 
 sealed abstract class DeviceDescriptor(val name: String)
 object DeviceDescriptor {

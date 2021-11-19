@@ -1,4 +1,4 @@
-package org.opendcgrid.lib.task
+package org.opendcgrid.app.polaris.device
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.Uri
@@ -7,14 +7,14 @@ import org.opendcgrid.app.polaris.command.CommandTestUtilities.TestCommandContex
 import org.opendcgrid.app.polaris.server.ServerError
 
 import java.util.concurrent.Semaphore
-import scala.concurrent.{Await, ExecutionContextExecutor}
 import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, ExecutionContextExecutor}
 import scala.util.{Failure, Success, Try}
 
-class TaskTest extends org.scalatest.funsuite.AnyFunSuite {
+class DeviceManagerTest extends org.scalatest.funsuite.AnyFunSuite {
   test("selectName") {
     implicit val actorSystem: ActorSystem = ActorSystem()
-    val manager = new TaskManager()
+    val manager = new DeviceManager()
     val descriptor = DeviceDescriptor.GC
     assertResult(descriptor.name)(manager.selectName(descriptor))
     assertResult(descriptor.name + "1")(manager.selectName(descriptor, Some(1)))
@@ -75,7 +75,7 @@ class TaskTest extends org.scalatest.funsuite.AnyFunSuite {
     val futureResult = Try(Await.result(future, Duration.Inf))
     futureResult match {
       case Success(_) => fail("expected failure not delivered")
-      case Failure(ServerError.NotFound(badID)) => // Pass
+      case Failure(ServerError.NotFound(_)) => // Pass
       case Failure(error) => fail(s"unexpected error: $error")
     }
   }

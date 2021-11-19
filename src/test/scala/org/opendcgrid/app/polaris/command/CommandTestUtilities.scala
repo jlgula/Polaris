@@ -2,8 +2,8 @@ package org.opendcgrid.app.polaris.command
 
 import akka.actor.ActorSystem
 import org.opendcgrid.app.polaris.PolarisTestFixture
+import org.opendcgrid.app.polaris.device.DeviceManager
 import org.opendcgrid.app.polaris.shell.{Shell, ShellConfiguration}
-import org.opendcgrid.lib.task.TaskManager
 
 import scala.concurrent.ExecutionContextExecutor
 
@@ -19,7 +19,7 @@ object CommandTestUtilities {
   class TestCommandContext(val allCommands: Seq[Parsable] = Nil) extends CommandContext {
     implicit val actorSystem: ActorSystem = ActorSystem()
     implicit val executionContext: ExecutionContextExecutor = actorSystem.dispatcher
-    override val taskManager: TaskManager = new TaskManager
+    override val taskManager: DeviceManager = new DeviceManager
   }
 }
 

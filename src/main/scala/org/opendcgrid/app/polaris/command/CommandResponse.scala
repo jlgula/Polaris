@@ -1,7 +1,7 @@
 package org.opendcgrid.app.polaris.command
 
 import akka.http.scaladsl.model.Uri
-import org.opendcgrid.lib.task.{DeviceDescriptor, TaskID}
+import org.opendcgrid.app.polaris.device.DeviceDescriptor
 
 sealed abstract class CommandResponse(val message: String) {
   override def toString: String = message
