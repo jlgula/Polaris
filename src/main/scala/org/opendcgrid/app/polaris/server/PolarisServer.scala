@@ -7,12 +7,23 @@ import akka.http.scaladsl.server.Directives._
 import org.opendcgrid.app.polaris.server.device.{DeviceResource, PolarisDeviceHandler}
 import org.opendcgrid.app.polaris.server.gc.{GcResource, PolarisGCHandler}
 import org.opendcgrid.app.polaris.server.subscription.{PolarisSubscriptionHandler, SubscriptionResource}
-import org.opendcgrid.lib.task.{Task, TaskID, TaskManager}
 
-import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.{ExecutionContext, ExecutionContextExecutor, Future}
-import scala.util.{Failure, Success, Try}
+import scala.concurrent.{ExecutionContext, Future}
 
+object PolarisServer {
+  def apply(uri: Uri, name: String)(implicit actorSystem: ActorSystem): Future[Http.ServerBinding] = {
+    implicit val context: ExecutionContext = actorSystem.dispatcher
+    implicit val requester: HttpRequest => Future[HttpResponse] = Http().singleRequest(_)
+    val subscriptionHandler = new PolarisSubscriptionHandler
+    val subscriptionRoutes = SubscriptionResource.routes(subscriptionHandler)
+    val deviceHandler = new PolarisDeviceHandler(uri, subscriptionHandler)
+    val deviceRoutes = DeviceResource.routes(deviceHandler)
+    val gcRoutes = GcResource.routes(new PolarisGCHandler(deviceHandler, subscriptionHandler))
+    val routes = deviceRoutes ~ gcRoutes ~ subscriptionRoutes
+    Http().newServerAt(uri.authority.host.toString(), uri.authority.port).bindFlow(routes)
+  }
+}
+/*
 class PolarisServer(val uri: Uri, val name: String, taskManager: TaskManager) (implicit actorSystem: ActorSystem) extends Task {
   implicit val ec: ExecutionContextExecutor = actorSystem.dispatcher
   @volatile private var binding: Option[Http.ServerBinding] = None
@@ -56,3 +67,5 @@ class PolarisServer(val uri: Uri, val name: String, taskManager: TaskManager) (i
     } else Future.failed(ServerError.NotStarted)
   }
 }
+
+ */

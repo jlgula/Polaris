@@ -2,15 +2,15 @@ package org.opendcgrid.app.polaris.command
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.Uri
-import org.opendcgrid.app.polaris.{PolarisAppOption, PolarisAppOptionTag}
 import org.opendcgrid.app.polaris.command.Command.parseErrors
-import org.opendcgrid.app.polaris.command.ServerCommand.name
-import org.opendcgrid.app.polaris.server.{PolarisServer, ServerError}
+import org.opendcgrid.app.polaris.server.ServerError
+import org.opendcgrid.app.polaris.{PolarisAppOption, PolarisAppOptionTag}
 import org.opendcgrid.lib.commandoption.CommandOptionResult
+import org.opendcgrid.lib.task.DeviceDescriptor
 
 import java.net.BindException
-import scala.concurrent.{Await, TimeoutException}
 import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, TimeoutException}
 import scala.util.{Failure, Success, Try}
 
 
@@ -51,9 +51,22 @@ case object ServerCommand extends Parsable {
 
 case class ServerCommand(port: Int = 8080) extends Command {
   val uri: Uri = Uri("http://localhost").withPort(port)
-  def run(context: CommandContext): Try[CommandResponse] = {
-    val taskName = name
-    implicit def actorSystem: ActorSystem = ActorSystem()
+  def run(context: CommandContext): Try[CommandResponse.TaskResponse] = {
+    implicit def actorSystem: ActorSystem = context.actorSystem
+    val nameFuture = context.taskManager.startTask(DeviceDescriptor.GC, None, uri)
+    Try(Await.ready(nameFuture, Duration.Inf)) match {
+      case Success(f) => f.value.get match {
+        case Success(name) => Success(CommandResponse.TaskResponse(name, DeviceDescriptor.GC, uri))
+        case Failure(_: TimeoutException) => Failure(CommandError.ServerError(ServerError.Timeout))
+        case Failure(_: InterruptedException) => Failure(CommandError.ServerError(ServerError.Interrupted))
+        case Failure(error) if error.getCause.isInstanceOf[BindException] => Failure(CommandError.ServerError(ServerError.BindingError(error.getCause.getMessage)))
+        case Failure(error) =>
+          println(error)
+          throw new IllegalStateException(s"unexpected server error: $error")
+      }
+      case Failure(_) => Failure(CommandError.ServerError(ServerError.Timeout))
+    }
+    /*
     val server = new PolarisServer(uri, taskName, context.taskManager)
     try {
       val taskID = Await.result(server.start(), Duration.Inf)
@@ -68,6 +81,8 @@ case class ServerCommand(port: Int = 8080) extends Command {
         println(error)
         throw new IllegalStateException(s"unexpected server error: $error")
     }
+
+     */
   }
 
 }

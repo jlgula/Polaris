@@ -2,6 +2,7 @@ package org.opendcgrid.app.polaris.command
 
 import org.opendcgrid.app.polaris.PolarisTestUtilities
 import org.opendcgrid.app.polaris.command.CommandTestUtilities.TestCommandContext
+import org.opendcgrid.lib.task.DeviceDescriptor
 
 import scala.concurrent.Await
 import scala.concurrent.duration.Duration
@@ -20,12 +21,14 @@ class ServerCommandTest extends org.scalatest.funsuite.AnyFunSuite {
     val port = PolarisTestUtilities.getUnusedPort
     val command = ServerCommand(port)
     val result = command.run(context)
+    val gcDescriptor = DeviceDescriptor.GC
     result match {
       case Failure(error) => fail(error.getMessage)
-      case Success(CommandResponse.TaskResponse(name, id, uri)) =>
-        assertResult(ServerCommand.name)(name)
+      case Success(CommandResponse.TaskResponse(name, descriptor, uri)) =>
+        assertResult(gcDescriptor.name)(name)
         assertResult(command.uri)(uri)
-        Await.result(context.taskManager.terminateTask(id), Duration.Inf)
+        assertResult(gcDescriptor)(descriptor)
+        Await.result(context.taskManager.terminateTask(descriptor.name), Duration.Inf)
       case Success(other) => fail(s"Unexpected response: $other")
     }
     val result2 = DevicesCommand.run(context)
@@ -34,6 +37,8 @@ class ServerCommandTest extends org.scalatest.funsuite.AnyFunSuite {
       case other => fail(s"unexpected response $other")
     }
   }
+
+
 
   /*
 

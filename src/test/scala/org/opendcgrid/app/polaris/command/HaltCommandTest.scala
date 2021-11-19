@@ -10,10 +10,9 @@ import scala.util.{Failure, Success}
 class HaltCommandTest extends org.scalatest.funsuite.AnyFunSuite {
 
   test("parse") {
-    assertResult(Success(HaltCommand(TaskID(1))))(HaltCommand.parse(Seq("1")))
-    assertResult(Success(HaltCommand(TaskID(1), TaskID(2))))(HaltCommand.parse(Seq("1", "2")))
-    assertResult(Failure(CommandError.MissingArgument("deviceID")))(HaltCommand.parse(Nil))
-    assertResult(Failure(CommandError.MultiError(Seq(CommandError.InvalidDevice("foo")))))(HaltCommand.parse(Seq("foo")))
+    assertResult(Success(HaltCommand("GC1")))(HaltCommand.parse(Seq("GC1")))
+    assertResult(Success(HaltCommand("GC1", "GC2")))(HaltCommand.parse(Seq("GC1", "GC2")))
+    assertResult(Failure(CommandError.MissingArgument("deviceName")))(HaltCommand.parse(Nil))
   }
 
   test("halt command") {
@@ -22,8 +21,7 @@ class HaltCommandTest extends org.scalatest.funsuite.AnyFunSuite {
     val serverCommand = ServerCommand(port)
     val result = for {
       serverResult <- serverCommand.run(context)
-      taskResponse = serverResult.asInstanceOf[CommandResponse.TaskResponse]
-      haltResult <- HaltCommand(taskResponse.id).run(context)
+      haltResult <- HaltCommand(serverResult.name).run(context)
     } yield haltResult
     result match {
       case Failure(error) => fail(error.getMessage)
@@ -36,7 +34,7 @@ class HaltCommandTest extends org.scalatest.funsuite.AnyFunSuite {
 
   test("halt command invalid id") {
     val context = new TestCommandContext()
-    val badID = TaskID(0)
+    val badID = "Bad"
     val haltResult =  HaltCommand(badID).run(context)
     val expected = CommandError.ServerError(ServerError.NotFound(badID))
     haltResult match {
@@ -44,4 +42,6 @@ class HaltCommandTest extends org.scalatest.funsuite.AnyFunSuite {
       case Failure(error) => assertResult(expected)(error)// Pass
     }
   }
+
+
 }

@@ -1,10 +1,11 @@
 package org.opendcgrid.app.polaris.command
 
 import akka.http.scaladsl.model.Uri
+import org.opendcgrid.app.polaris.PolarisTestUtilities
 import org.opendcgrid.app.polaris.command.CommandTestUtilities.TestCommandContext
-import org.opendcgrid.lib.task.{Task, TaskID, TestTask}
+import org.opendcgrid.lib.task.DeviceDescriptor
 
-import scala.concurrent.Await
+import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration.Duration
 import scala.util.{Failure, Success}
 
@@ -27,31 +28,21 @@ class DevicesCommandTest extends org.scalatest.funsuite.AnyFunSuite {
 
   test("devices command with values") {
     val context = new TestCommandContext()
+    implicit val ec: ExecutionContext = context.executionContext
     val manager = context.taskManager
-    val uri1 = Uri("http://localhost:8080")
-    val task1 = new TestTask("test1", uri1, manager)
-    val startFuture1 = task1.start()
-    val taskID1 = Await.result(startFuture1, Duration.Inf)
-    val uri2 = Uri("http://localhost:8081")
-    val task2 = new TestTask("test2", uri2, manager)
-    val startFuture2 = task2.start()
-    val taskID2 = Await.result(startFuture2, Duration.Inf)
-    val command = DevicesCommand
-    val result = command.run(context)
-    result match {
-      case Failure(error) => fail(error.getMessage)
-      case Success(CommandResponse.MultiResponse(responses)) =>
-        assertResult(2)(responses.size)
-        compareResponseToTask(responses.head.asInstanceOf[CommandResponse.TaskResponse], taskID1, task1)
-        compareResponseToTask(responses(1).asInstanceOf[CommandResponse.TaskResponse], taskID2, task2)
-      case Success(other) => fail(s"Unexpected response: $other")
-    }
+    val uri1 = Uri("http://localhost").withPort(PolarisTestUtilities.getUnusedPort)
+    val uri2 = Uri("http://localhost").withPort(PolarisTestUtilities.getUnusedPort)
+    val result = for {
+      _ <- manager.startTask(DeviceDescriptor.GC, None, uri1)
+      _ <- manager.startTask(DeviceDescriptor.GC, None, uri2)
+    } yield ()
+    Await.result(result, Duration.Inf)
+    val listResult = DevicesCommand.run(context)
+    val expected1 = CommandResponse.TaskResponse(DeviceDescriptor.GC.name, DeviceDescriptor.GC, uri1)
+    val expected2 = CommandResponse.TaskResponse(DeviceDescriptor.GC.name + "1", DeviceDescriptor.GC, uri2)
+    assertResult(Success(CommandResponse.MultiResponse(Seq(expected1, expected2))))(listResult)
+    Await.result(manager.terminateAll(), Duration.Inf)
+    val listResult2 = manager.listTasks.toSeq
+    assert(listResult2.isEmpty)
   }
-
-  def compareResponseToTask(response: CommandResponse.TaskResponse, id: TaskID, task: Task): Unit = {
-    assertResult(id)(response.id)
-    assertResult(task.name)(response.name)
-    assertResult(task.uri)(response.uri)
-  }
-
 }

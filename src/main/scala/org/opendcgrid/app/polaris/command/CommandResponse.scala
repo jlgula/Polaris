@@ -1,7 +1,7 @@
 package org.opendcgrid.app.polaris.command
 
 import akka.http.scaladsl.model.Uri
-import org.opendcgrid.lib.task.TaskID
+import org.opendcgrid.lib.task.{DeviceDescriptor, TaskID}
 
 sealed abstract class CommandResponse(val message: String) {
   override def toString: String = message
@@ -18,8 +18,8 @@ object CommandResponse {
 
   case class VersionResponse(version: String) extends CommandResponse(version)
 
-  case class TaskResponse(name: String, id: TaskID, uri: Uri) extends CommandResponse(s"$name running at $uri as task $id")
+  case class TaskResponse(name: String, descriptor: DeviceDescriptor, uri: Uri) extends CommandResponse(s"$name $descriptor $uri")
 
-  case class HaltResponse(id: TaskID) extends CommandResponse(s"Device halted: $id")
+  case class HaltResponse(name: String) extends CommandResponse(s"Device halted: $name")
 
 }

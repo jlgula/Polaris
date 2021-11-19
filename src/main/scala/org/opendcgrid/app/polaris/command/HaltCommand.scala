@@ -12,16 +12,15 @@ import scala.util.{Failure, Success, Try}
 
 case object HaltCommand extends Parsable {
   val name = "halt"
-  val help = "halt <deviceID>... - halt a device"
+  val help = "halt <name>... - halt a device"
 
   override def parse(arguments: Seq[String]): Try[Command] = {
     val options = Seq(PolarisAppOptionTag.Port)
     val result = CommandOptionResult.parse(arguments, options)
     for {
       _ <- parseErrors(result) // Bail out if any errors in find
-      _ <- if (result.values.isEmpty) Failure(CommandError.MissingArgument("deviceID")) else Success(())
-      tasks <- parseDevices(result.values)
-    } yield HaltCommand(tasks: _*)
+      _ <- if (result.values.isEmpty) Failure(CommandError.MissingArgument("deviceName")) else Success(())
+    } yield HaltCommand(result.values: _*)
   }
 
   def parseDevices(values: Seq[String]): Try[Seq[TaskID]] = {
@@ -36,9 +35,9 @@ case object HaltCommand extends Parsable {
   }
 }
 
-case class HaltCommand(devices: TaskID*) extends Command {
+case class HaltCommand(devices: String*) extends Command {
   def run(context: CommandContext): Try[CommandResponse] = {
-    implicit val ec: ExecutionContext = context.executionContext
+    implicit val ec: ExecutionContext = context.actorSystem.dispatcher
     val terminationFutures = devices.map(context.taskManager.terminateTask(_))
     val commandFuture = Future.sequence(terminationFutures)
     Try(Await.result(commandFuture, Duration.Inf)) match {
