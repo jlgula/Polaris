@@ -3,7 +3,6 @@ package org.opendcgrid.app.polaris.command
 import org.opendcgrid.app.polaris.PolarisTestUtilities
 import org.opendcgrid.app.polaris.command.CommandTestUtilities.TestCommandContext
 import org.opendcgrid.app.polaris.server.ServerError
-import org.opendcgrid.lib.task.TaskID
 
 import scala.util.{Failure, Success}
 

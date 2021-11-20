@@ -38,8 +38,8 @@ class DevicesCommandTest extends org.scalatest.funsuite.AnyFunSuite {
     } yield ()
     Await.result(result, Duration.Inf)
     val listResult = DevicesCommand.run(context)
-    val expected1 = CommandResponse.TaskResponse(DeviceDescriptor.GC.name, DeviceDescriptor.GC, uri1)
-    val expected2 = CommandResponse.TaskResponse(DeviceDescriptor.GC.name + "1", DeviceDescriptor.GC, uri2)
+    val expected1 = CommandResponse.DeviceResponse(DeviceDescriptor.GC.name, DeviceDescriptor.GC, uri1)
+    val expected2 = CommandResponse.DeviceResponse(DeviceDescriptor.GC.name + "1", DeviceDescriptor.GC, uri2)
     assertResult(Success(CommandResponse.MultiResponse(Seq(expected1, expected2))))(listResult)
     Await.result(manager.terminateAll(), Duration.Inf)
     val listResult2 = manager.listTasks.toSeq

@@ -11,9 +11,9 @@ case object DevicesCommand extends Command with Parsable {
   val help = "devices - display the devices"
 
   def run(context: CommandContext): Try[CommandResponse] = {
-    implicit val ordering: Ordering[CommandResponse.TaskResponse] = Ordering.by(_.name)
+    implicit val ordering: Ordering[CommandResponse.DeviceResponse] = Ordering.by(_.name)
     val tasks = context.taskManager.listTasks
-    val responses = tasks.map{ case (name, descriptor, uri) => CommandResponse.TaskResponse(name, descriptor, uri)}.toSeq.sorted
+    val responses = tasks.map{ case (name, descriptor, uri) => CommandResponse.DeviceResponse(name, descriptor, uri)}.toSeq.sorted
     Success(CommandResponse.MultiResponse(responses))
   }
 

@@ -51,15 +51,16 @@ case object ServerCommand extends Parsable {
 
 case class ServerCommand(port: Int = 8080) extends Command {
   val uri: Uri = Uri("http://localhost").withPort(port)
-  def run(context: CommandContext): Try[CommandResponse.TaskResponse] = {
+  def run(context: CommandContext): Try[CommandResponse.DeviceResponse] = {
     implicit def actorSystem: ActorSystem = context.actorSystem
     val nameFuture = context.taskManager.startTask(DeviceDescriptor.GC, None, uri)
     Try(Await.ready(nameFuture, Duration.Inf)) match {
       case Success(f) => f.value.get match {
-        case Success(name) => Success(CommandResponse.TaskResponse(name, DeviceDescriptor.GC, uri))
+        case Success(name) => Success(CommandResponse.DeviceResponse(name, DeviceDescriptor.GC, uri))
         case Failure(_: TimeoutException) => Failure(CommandError.ServerError(ServerError.Timeout))
         case Failure(_: InterruptedException) => Failure(CommandError.ServerError(ServerError.Interrupted))
         case Failure(error) if error.getCause.isInstanceOf[BindException] => Failure(CommandError.ServerError(ServerError.BindingError(error.getCause.getMessage)))
+        case Failure(error: ServerError.DuplicateUri) => Failure(CommandError.ServerError(error))
         case Failure(error) =>
           println(error)
           throw new IllegalStateException(s"unexpected server error: $error")

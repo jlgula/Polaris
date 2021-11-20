@@ -24,7 +24,7 @@ class ServerCommandTest extends org.scalatest.funsuite.AnyFunSuite {
     val gcDescriptor = DeviceDescriptor.GC
     result match {
       case Failure(error) => fail(error.getMessage)
-      case Success(CommandResponse.TaskResponse(name, descriptor, uri)) =>
+      case Success(CommandResponse.DeviceResponse(name, descriptor, uri)) =>
         assertResult(gcDescriptor.name)(name)
         assertResult(command.uri)(uri)
         assertResult(gcDescriptor)(descriptor)
