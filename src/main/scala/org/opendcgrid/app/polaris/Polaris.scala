@@ -9,6 +9,7 @@ import org.opendcgrid.lib.commandoption.StandardCommandOptionTag.{Help, Output, 
 import org.opendcgrid.lib.commandoption.{CommandOptionError, CommandOptionResult, StandardCommandOption}
 
 import java.io.{BufferedReader, PrintStream}
+import java.util.concurrent.Semaphore
 import scala.concurrent.ExecutionContextExecutor
 import scala.util.{Failure, Success, Try}
 
@@ -22,6 +23,7 @@ class Polaris(context: AppContext) extends ShellContext {
   implicit val actorSystem: ActorSystem = ActorSystem()
   implicit val executionContext: ExecutionContextExecutor = actorSystem.dispatcher
   override val taskManager: DeviceManager = new DeviceManager
+  val terminationSemaphore = new Semaphore(0)
 
   override def allCommands: Seq[Parsable] = Seq[Parsable](
     DevicesCommand,
@@ -63,21 +65,28 @@ class Polaris(context: AppContext) extends ShellContext {
   }
 
   private def runConfiguration(result: CommandOptionResult): Int = {
+    var exitCode: Int = 0
     // Start server if one is called for on the command line. Otherwise, do nothing.
     val serverResult = startServer(result)
     if (serverResult != 0) return serverResult
 
     assert(result.errors.isEmpty)
-    result match {
+    exitCode = result match {
       case _ if result.options.contains(StandardCommandOption.Help) => runShellCommand(HelpCommand(Nil))
       case _ if result.options.contains(StandardCommandOption.Version) => runShellCommand(VersionCommand())
       case _ if result.options.contains(PolarisAppOption.Devices) => runShellCommand(DevicesCommand)
       //case _ if result.options.contains(PolarisAppOption.Server) => runShellCommand(ServerCommand())
       case _ if result.options.contains(PolarisAppOption.Shell) => runShell()
+      case _ if result.options.contains(PolarisAppOption.Halt) => terminateDevices(); 0 // used to test device options
       //case _ if result.values.isEmpty => runShell(in, out, err)
       //case _ => runShellFiles(result.values, result.options, in, out, err)
-      case _ => 0 // Do nothing throw new IllegalStateException("not yet")
+      case _ => if (taskManager.listTasks.isEmpty) terminateDevices(); 0 // Unless devices running, release the semaphore.
     }
+
+    // Wait for the server to complete, if any.
+    // Shell commands or running the shell always terminates devices when complete.
+    terminationSemaphore.acquire()
+    exitCode
   }
 
 
@@ -86,7 +95,11 @@ class Polaris(context: AppContext) extends ShellContext {
     else {
       ServerCommand.parsePort(result) match {
         case Failure(e: CommandError) => reportAppError(e); e.exitCode
-        case Success(port) => runShellCommand(ServerCommand(port))
+        case Success(port) => ServerCommand(port).run(this) match {
+          case Success(response) => out.println(response.toString); 0 // Let it run
+          case Failure(error: CommandError) => error.exitCode
+          case Failure(other) => throw new IllegalStateException(s"unexpected error: $other")
+        }
         case Failure(other) => throw new IllegalStateException(s"unexpected error: $other")
       }
     }
@@ -94,17 +107,20 @@ class Polaris(context: AppContext) extends ShellContext {
 
   private def runShell(): Int = {
     val shell = new Shell(this)
-    shell.run(prompt = true)
-    0
+    val exitCode = shell.run(prompt = true)
+    terminateDevices()
+    exitCode
   }
 
   private def runShellCommand(command: Command): Int = {
-     val shell = new Shell(this)
-    shell.runCommandAndDisplay(command) match {
+    val shell = new Shell(this)
+    val exitCode = shell.runCommandAndDisplay(command) match {
       case Success(_) => 0
       case Failure(error: CommandError) => error.exitCode
       case Failure(e) => throw new IllegalStateException(s"Unexpected error: $e")
     }
+    terminateDevices()
+    exitCode
   }
 
   private def reportAppError(error: CommandError): Int = {
@@ -114,12 +130,19 @@ class Polaris(context: AppContext) extends ShellContext {
     }
   }
 
+  def terminateDevices(): Unit = {
+    taskManager.terminateAll().onComplete {
+      case Success(_) => terminationSemaphore.release()
+      case Failure(error) =>
+        val commandError = CommandError.TerminationError(error.getMessage)
+        this.reportAppError(commandError)
+        terminationSemaphore.release()
+    }
+  }
+
   private def mapError(error: CommandOptionError): CommandError = error match {
     case e: CommandOptionError.MultiError => CommandError.MultiError(e.errors.map(mapError))
     case e: CommandOptionError.UnrecognizedOption => CommandError.UnsupportedOption(e.optionName)
     case e: CommandOptionError.MissingOptionArgument => CommandError.MissingArgument(e.optionName)
   }
-
-
-
 }

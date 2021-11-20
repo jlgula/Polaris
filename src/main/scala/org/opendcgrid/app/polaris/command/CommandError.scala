@@ -34,6 +34,7 @@ object CommandError {
   case class RequestFailed(details: Throwable) extends CommandError(s"Request failed. ${details.getMessage}")
   case class ServerError(details: SrvError) extends CommandError(s"Server error: ${details.getMessage}")
   case class SocketIOError(socketUrl: String, error: IOException) extends CommandError(s"IOException on socket $socketUrl: ${error.getMessage}")
+  case class TerminationError(details: String) extends CommandError(s"Error terminating devices: $details")
   case class TracedError(error: CommandError, trace: Seq[String]) extends CommandError(error.getMessage)
   case class UnexpectedParameters(parameters: Seq[String]) extends CommandError(s"Unexpected parameters: ${parameters.mkString(",")}")
   case class UnexpectedResponse(response: String) extends CommandError(s"Unexpected response $response")

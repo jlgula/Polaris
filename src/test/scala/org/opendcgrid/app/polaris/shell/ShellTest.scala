@@ -18,20 +18,24 @@ class ShellTest extends org.scalatest.funsuite.AnyFunSuite {
   test("invalid command") {
     runTest("foo\n", expectedError = s"${Shell.appTag}: ${CommandError.InvalidCommand("foo").message}\n")
   }
-
+/*
   def runShellCommand(shell: Shell, commandLine: String): Try[CommandResponse] = {
     val command = shell.parse(commandLine)
     assert(command.isSuccess)
     val result = shell.runCommand(command.get)
     assert(result.isSuccess)
+    fixture.polaris.terminateDevices()
     result
   }
+
+ */
 
   def runCommand(command: Command, input: String = "", expectedOutput: String = "", expectedError: String = "", configuration: ShellConfiguration = ShellConfiguration()): Try[CommandResponse] = {
     val fixture = new ShellTestFixture(input, configuration)
     val result = fixture.shell.runCommandAndDisplay(command)
     assertResult(expectedOutput)(fixture.output)
     assertResult(expectedError)(fixture.error)
+    fixture.polaris.terminateDevices()
     result
   }
 
@@ -42,6 +46,7 @@ class ShellTest extends org.scalatest.funsuite.AnyFunSuite {
     assertResult(expectedExitCode)(result)
     assertResult(expectedOutput)(fixture.output)
     assertResult(expectedError)(fixture.error)
+    fixture.polaris.terminateDevices()
   }
 
 

@@ -7,10 +7,11 @@ import org.opendcgrid.lib.commandoption.{CommandOption, CommandOptionResult, One
 object PolarisAppOptionTag {
   case object Client extends OneArgumentTag(PolarisAppOption.Client.apply, "client")
   case object DevicesOption extends ZeroArgumentTag(PolarisAppOption.Devices, "devices")
+  case object HaltOption extends ZeroArgumentTag(PolarisAppOption.Halt, "halt")
   case object Log extends OneArgumentTag(PolarisAppOption.Log.apply, "log")
+  case object Port extends OneArgumentTag(PolarisAppOption.Port.apply, "port")
   case object Server extends ZeroArgumentTag(PolarisAppOption.Server, "server")
   case object Shell extends ZeroArgumentTag(PolarisAppOption.Shell, "shell")
-  case object Port extends OneArgumentTag(PolarisAppOption.Port.apply, "port")
 }
 
 object PolarisAppOption {
@@ -28,6 +29,11 @@ object PolarisAppOption {
    * [[CommandOption]] that indicates a list of devices should be displayed on standard output.
    */
   case object Devices extends CommandOption
+
+  /**
+   * [[CommandOption]] that tells polaris to halt any running devices - used in testing.
+   */
+  case object Halt extends CommandOption
 
   case class Log(level: String) extends CommandOption
 

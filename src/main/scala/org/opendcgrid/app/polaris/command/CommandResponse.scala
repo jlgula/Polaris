@@ -18,7 +18,7 @@ object CommandResponse {
 
   case class VersionResponse(version: String) extends CommandResponse(version)
 
-  case class DeviceResponse(name: String, descriptor: DeviceDescriptor, uri: Uri) extends CommandResponse(s"$name $uri")
+  case class DeviceResponse(name: String, descriptor: DeviceDescriptor, uri: Uri) extends CommandResponse(s"$name running at: $uri")
 
   case class HaltResponse(name: String) extends CommandResponse(s"Device halted: $name")
 

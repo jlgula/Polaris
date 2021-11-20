@@ -67,23 +67,5 @@ case class ServerCommand(port: Int = 8080) extends Command {
       }
       case Failure(_) => Failure(CommandError.ServerError(ServerError.Timeout))
     }
-    /*
-    val server = new PolarisServer(uri, taskName, context.taskManager)
-    try {
-      val taskID = Await.result(server.start(), Duration.Inf)
-      Success(CommandResponse.TaskResponse(taskName, taskID, uri))
-    } catch {
-      case _: TimeoutException => Failure(CommandError.ServerError(ServerError.Timeout))
-      case _: InterruptedException => Failure(CommandError.ServerError(ServerError.Interrupted))
-      //case e: BindException => Failure(CommandError.ServerError(ServerError.BindingError(e.getMessage)))
-      // akka errors are gross..
-      case error: Throwable if error.getCause.isInstanceOf[BindException] => Failure(CommandError.ServerError(ServerError.BindingError(error.getCause.getMessage)))
-      case error: Throwable =>
-        println(error)
-        throw new IllegalStateException(s"unexpected server error: $error")
-    }
-
-     */
   }
-
 }
