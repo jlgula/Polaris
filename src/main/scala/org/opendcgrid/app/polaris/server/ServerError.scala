@@ -1,7 +1,6 @@
 package org.opendcgrid.app.polaris.server
 
 import akka.http.scaladsl.model.Uri
-import org.opendcgrid.lib.task.TaskID
 
 sealed abstract class ServerError(val message: String) extends Throwable(message)
 object ServerError {
