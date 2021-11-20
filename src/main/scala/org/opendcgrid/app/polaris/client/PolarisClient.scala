@@ -9,7 +9,7 @@ import org.opendcgrid.app.polaris.client.device.{DeviceClient, ListDevicesRespon
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContextExecutor, Future}
 import scala.util.{Failure, Success, Try}
-
+/*
 object PolarisClient extends App {
   val defaultHost = "http://localhost:8080"
   val client = new PolarisClient(defaultHost)
@@ -35,3 +35,5 @@ class PolarisClient(val host: String) {
 
   def terminate(): Unit = Await.result(system.terminate(), Duration.Inf)
 }
+
+ */

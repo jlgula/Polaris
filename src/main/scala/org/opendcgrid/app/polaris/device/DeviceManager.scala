@@ -3,7 +3,7 @@ package org.opendcgrid.app.polaris.device
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.Uri
-import org.opendcgrid.app.polaris.device.DeviceDescriptor.GC
+import org.opendcgrid.app.polaris.device.DeviceDescriptor.{Client, GC}
 import org.opendcgrid.app.polaris.server.{PolarisServer, ServerError}
 
 import scala.concurrent.duration.FiniteDuration
@@ -14,14 +14,14 @@ class DeviceManager(implicit actorSystem: ActorSystem) {
   implicit val context: ExecutionContext = actorSystem.dispatcher
   case class Binding(name: String, descriptor: DeviceDescriptor, uri: Uri, binding: Http.ServerBinding)
   private val tasks = scala.collection.concurrent.TrieMap[String, Binding]()
-  
+
   def startTask(descriptor: DeviceDescriptor, nameOption: Option[String], uri: Uri): Future[String] = {
     val name = nameOption.getOrElse(selectName(descriptor))
     if (tasks.contains(name)) return Future.failed(ServerError.DuplicateName(name))
     if (tasks.exists { case (_, binding) => binding.uri == uri }) return Future.failed(ServerError.DuplicateUri(uri))
     descriptor match {
       case GC => PolarisServer(uri, name).map(binding => Binding(name, descriptor, uri, binding)).andThen(bt => addBinding(bt)).map(_.name)
-      case other => throw new IllegalStateException(s"unexpected descriptor $other")
+      case Client => ClientDevice(uri, name).map(binding => Binding(name, descriptor, uri, binding)).andThen(bt => addBinding(bt)).map(_.name)
     }
   }
 
