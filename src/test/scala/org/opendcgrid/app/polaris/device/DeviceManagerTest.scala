@@ -23,19 +23,19 @@ class DeviceManagerTest extends org.scalatest.funsuite.AnyFunSuite {
   test("start and terminate") {
     val context = new TestCommandContext()
     implicit val ec: ExecutionContextExecutor = context.executionContext
-    val manager = context.taskManager
+    val manager = context.deviceManager
     val uri1 = Uri("http://localhost").withPort(PolarisTestUtilities.getUnusedPort)
     val result = for {
-      name <- manager.startTask(DeviceDescriptor.GC, None, uri1)
-      termination <- manager.terminateTask(name)
+      binding <- manager.startTask(DeviceDescriptor.GC, None, uri1)
+      termination <- manager.terminateTask(binding.name)
     } yield termination
     Try(Await.result(result, Duration.Inf)) match {
       case Success(_) => // pass
       case other => fail(s"unexpected result: $other")
     }
     val result2 = for {
-      name <- manager.startTask(DeviceDescriptor.GC, None, uri1)
-      termination <- manager.terminateTask(name)
+      binding <- manager.startTask(DeviceDescriptor.GC, None, uri1)
+      termination <- manager.terminateTask(binding.name)
     } yield termination
     Try(Await.result(result2, Duration.Inf)) match {
       case Success(_) => // pass
@@ -46,7 +46,7 @@ class DeviceManagerTest extends org.scalatest.funsuite.AnyFunSuite {
   test("list tasks then terminate all") {
       val context = new TestCommandContext()
       implicit val ec: ExecutionContextExecutor = context.executionContext
-      val manager = context.taskManager
+      val manager = context.deviceManager
       val name1 = "name1"
       val uri1 = Uri("http://localhost").withPort(PolarisTestUtilities.getUnusedPort)
       val name2 = "name2"
@@ -69,7 +69,7 @@ class DeviceManagerTest extends org.scalatest.funsuite.AnyFunSuite {
   test("terminate invalid taskID") {
     val context = new TestCommandContext()
     implicit val ec: ExecutionContextExecutor = context.executionContext
-    val manager = context.taskManager
+    val manager = context.deviceManager
     val badID = "bad"
     val future = manager.terminateTask(badID)
     val futureResult = Try(Await.result(future, Duration.Inf))
@@ -84,7 +84,7 @@ class DeviceManagerTest extends org.scalatest.funsuite.AnyFunSuite {
     val semaphore = new Semaphore(0)
     val context = new TestCommandContext()
     implicit val ec: ExecutionContextExecutor = context.executionContext
-    val manager = context.taskManager
+    val manager = context.deviceManager
     manager.terminateAll().onComplete(_ => semaphore.release())
     semaphore.acquire()
   }

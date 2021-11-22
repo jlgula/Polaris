@@ -20,7 +20,7 @@ trait ShellContext extends AppContext with CommandContext {
   //implicit val actorSystem: ActorSystem = ActorSystem()
   implicit val executionContext: ExecutionContextExecutor
 
-  override val taskManager: DeviceManager
+  override val deviceManager: DeviceManager
 
   override def writeFile(fileName: String, data: Array[Byte]): Try[Unit] = Failure(CommandError.UnsupportedOperation("file write"))
 

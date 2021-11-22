@@ -15,19 +15,21 @@ class DeviceManager(implicit actorSystem: ActorSystem) {
   case class Binding(name: String, descriptor: DeviceDescriptor, uri: Uri, binding: Http.ServerBinding)
   private val tasks = scala.collection.concurrent.TrieMap[String, Binding]()
 
-  def startTask(descriptor: DeviceDescriptor, nameOption: Option[String], uri: Uri): Future[String] = {
+  def startTask(descriptor: DeviceDescriptor, nameOption: Option[String], deviceURI: Uri, serverURI: Option[Uri] = None): Future[Binding] = {
     val name = nameOption.getOrElse(selectName(descriptor))
     if (tasks.contains(name)) return Future.failed(ServerError.DuplicateName(name))
-    if (tasks.exists { case (_, binding) => binding.uri == uri }) return Future.failed(ServerError.DuplicateUri(uri))
+    if (tasks.exists { case (_, binding) => binding.uri == deviceURI }) return Future.failed(ServerError.DuplicateUri(deviceURI))
     descriptor match {
-      case GC => PolarisServer(uri, name).map(binding => Binding(name, descriptor, uri, binding)).andThen(bt => addBinding(bt)).map(_.name)
-      case Client => ClientDevice(uri, name).map(binding => Binding(name, descriptor, uri, binding)).andThen(bt => addBinding(bt)).map(_.name)
+      case GC => PolarisServer(deviceURI, name).map(binding => Binding(name, descriptor, deviceURI, binding)).map(bt => addBinding(bt))
+      case Client => ClientDevice(deviceURI, name, serverURI.get).map(binding => Binding(name, descriptor, deviceURI, binding)).map(bt => addBinding(bt))
     }
   }
 
-  private def addBinding(bindingTry: Try[Binding]): Unit = bindingTry match {
-    case Success(binding) => tasks.put(binding.name, binding)
-    case Failure(_) => // Ignore
+  private def addBinding(binding: Binding): Binding = {
+    val boundUri = binding.uri.withPort(binding.binding.localAddress.getPort)
+    val updatedBinding = binding.copy(uri = boundUri)
+    tasks.put(binding.name, updatedBinding)
+    updatedBinding
   }
 
   def terminateTask(name: String): Future[Unit] = {

@@ -29,6 +29,7 @@ object CommandError {
   case object NonLocalHost extends CommandError(s"Servers can only be started on the local host")
   case object NotAttached extends CommandError(s"Not attached. Use full URL")
   case class NoPermission(thing: String) extends CommandError(s"The user does not have permission to access: $thing")
+  case object NoController extends CommandError(s"Controller could not be located")
   case class NotFound(thing: String) extends CommandError(s"Not found: $thing")
   case class PortInUse(port: Int) extends CommandError(s"Port number: $port is already in use")
   case class RequestFailed(details: Throwable) extends CommandError(s"Request failed. ${details.getMessage}")

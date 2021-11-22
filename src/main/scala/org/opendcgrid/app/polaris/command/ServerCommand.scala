@@ -40,10 +40,10 @@ case class ServerCommand(port: Int = 8080) extends Command {
   val uri: Uri = Uri("http://localhost").withPort(port)
   def run(context: CommandContext): Try[CommandResponse.DeviceResponse] = {
     implicit def actorSystem: ActorSystem = context.actorSystem
-    val nameFuture = context.taskManager.startTask(DeviceDescriptor.GC, None, uri)
+    val nameFuture = context.deviceManager.startTask(DeviceDescriptor.GC, None, uri)
     Try(Await.ready(nameFuture, Duration.Inf)) match {
       case Success(f) => f.value.get match {
-        case Success(name) => Success(CommandResponse.DeviceResponse(name, DeviceDescriptor.GC, uri))
+        case Success(binding) => Success(CommandResponse.DeviceResponse(binding.name, DeviceDescriptor.GC, binding.uri))
         case Failure(_: TimeoutException) => Failure(CommandError.ServerError(ServerError.Timeout))
         case Failure(_: InterruptedException) => Failure(CommandError.ServerError(ServerError.Interrupted))
         case Failure(error) if error.getCause.isInstanceOf[BindException] => Failure(CommandError.ServerError(ServerError.BindingError(error.getCause.getMessage)))

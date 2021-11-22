@@ -28,7 +28,7 @@ class ServerCommandTest extends org.scalatest.funsuite.AnyFunSuite {
         assertResult(gcDescriptor.name)(name)
         assertResult(command.uri)(uri)
         assertResult(gcDescriptor)(descriptor)
-        Await.result(context.taskManager.terminateTask(descriptor.name), Duration.Inf)
+        Await.result(context.deviceManager.terminateTask(descriptor.name), Duration.Inf)
       case Success(other) => fail(s"Unexpected response: $other")
     }
     val result2 = DevicesCommand.run(context)

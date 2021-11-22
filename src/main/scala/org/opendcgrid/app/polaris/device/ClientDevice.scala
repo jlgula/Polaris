@@ -11,7 +11,7 @@ import org.opendcgrid.app.polaris.client.notification.NotificationResource
 import scala.concurrent.{ExecutionContext, Future}
 
 object ClientDevice {
-  def apply(uri: Uri, name: String)(implicit actorSystem: ActorSystem): Future[Http.ServerBinding] = {
+  def apply(uri: Uri, name: String, serverURI: Uri)(implicit actorSystem: ActorSystem): Future[Http.ServerBinding] = {
     implicit val context: ExecutionContext = actorSystem.dispatcher
     implicit val requester: HttpRequest => Future[HttpResponse] = Http().singleRequest(_)
     val notificationHandler = new ClientDevice

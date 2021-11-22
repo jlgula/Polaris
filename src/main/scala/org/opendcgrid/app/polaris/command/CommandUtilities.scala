@@ -1,8 +1,11 @@
 package org.opendcgrid.app.polaris.command
 
+import akka.http.scaladsl.model.Uri
 import org.opendcgrid.app.polaris.PolarisAppOption
+import org.opendcgrid.app.polaris.device.{DeviceDescriptor, DeviceManager}
 import org.opendcgrid.lib.commandoption.CommandOptionResult
 
+import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
 
 object CommandUtilities {
@@ -18,4 +21,12 @@ object CommandUtilities {
       }
     }
   }
+
+  def locateController(controller: DeviceManager): Future[Uri] = {
+    controller.listTasks.find{ case (_, descriptor, _) => descriptor == DeviceDescriptor.GC }.map{ case (_, _, uri) => uri } match {
+      case Some(uri) => Future.successful(uri)
+      case None => Future.failed(CommandError.NoController)
+    }
+  }
+
 }

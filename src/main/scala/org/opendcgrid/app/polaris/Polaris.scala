@@ -1,16 +1,17 @@
 package org.opendcgrid.app.polaris
 
 import akka.actor.ActorSystem
+import akka.http.scaladsl.model.Uri
 import org.opendcgrid.app.polaris.PolarisAppOptionTag.{Client, DevicesOption, Log, Server}
-import org.opendcgrid.app.polaris.command.{ClientCommand, Command, CommandError, DevicesCommand, ExitCommand, HaltCommand, HelpCommand, Parsable, ServerCommand, VersionCommand, CommandUtilities}
-import org.opendcgrid.app.polaris.device.DeviceManager
+import org.opendcgrid.app.polaris.command.{ClientCommand, Command, CommandError, CommandUtilities, DevicesCommand, ExitCommand, HaltCommand, HelpCommand, Parsable, ServerCommand, VersionCommand}
+import org.opendcgrid.app.polaris.device.{DeviceDescriptor, DeviceManager}
 import org.opendcgrid.app.polaris.shell.{Shell, ShellConfiguration, ShellContext}
 import org.opendcgrid.lib.commandoption.StandardCommandOptionTag.{Help, Output, Version}
 import org.opendcgrid.lib.commandoption.{CommandOptionError, CommandOptionResult, StandardCommandOption}
 
 import java.io.{BufferedReader, PrintStream}
 import java.util.concurrent.Semaphore
-import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.util.{Failure, Success, Try}
 
 object Polaris extends App {
@@ -22,7 +23,7 @@ object Polaris extends App {
 class Polaris(context: AppContext) extends ShellContext {
   implicit val actorSystem: ActorSystem = ActorSystem()
   implicit val executionContext: ExecutionContextExecutor = actorSystem.dispatcher
-  override val taskManager: DeviceManager = new DeviceManager
+  override val deviceManager: DeviceManager = new DeviceManager
   val terminationSemaphore = new Semaphore(0)
 
   override def allCommands: Seq[Parsable] = Seq[Parsable](
@@ -81,7 +82,7 @@ class Polaris(context: AppContext) extends ShellContext {
       case _ if result.options.contains(PolarisAppOption.Halt) => terminateDevices(); 0 // used to test device options
       //case _ if result.values.isEmpty => runShell(in, out, err)
       //case _ => runShellFiles(result.values, result.options, in, out, err)
-      case _ => if (taskManager.listTasks.isEmpty) terminateDevices(); 0 // Unless devices running, release the semaphore.
+      case _ => if (deviceManager.listTasks.isEmpty) terminateDevices(); 0 // Unless devices running, release the semaphore.
     }
 
     // Wait for the server to complete, if any.
@@ -132,7 +133,7 @@ class Polaris(context: AppContext) extends ShellContext {
   }
 
   def terminateDevices(): Unit = {
-    taskManager.terminateAll().onComplete {
+    deviceManager.terminateAll().onComplete {
       case Success(_) => terminationSemaphore.release()
       case Failure(error) =>
         val commandError = CommandError.TerminationError(error.getMessage)
@@ -146,4 +147,6 @@ class Polaris(context: AppContext) extends ShellContext {
     case e: CommandOptionError.UnrecognizedOption => CommandError.UnsupportedOption(e.optionName)
     case e: CommandOptionError.MissingOptionArgument => CommandError.MissingArgument(e.optionName)
   }
+
+  override def locateController: Future[Uri] = CommandUtilities.locateController(this.deviceManager)
 }
