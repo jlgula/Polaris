@@ -4,8 +4,7 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.model.Uri
 import org.opendcgrid.app.polaris.command.CommandUtilities.parsePort
 import org.opendcgrid.app.polaris.command.Command.parseErrors
-import org.opendcgrid.app.polaris.device.DeviceDescriptor
-import org.opendcgrid.app.polaris.server.ServerError
+import org.opendcgrid.app.polaris.device.{DeviceDescriptor, DeviceError}
 import org.opendcgrid.app.polaris.{PolarisAppOption, PolarisAppOptionTag}
 import org.opendcgrid.lib.commandoption.CommandOptionResult
 
@@ -15,9 +14,9 @@ import scala.concurrent.{Await, TimeoutException}
 import scala.util.{Failure, Success, Try}
 
 
-case object ServerCommand extends Parsable {
-  val name = "server"
-  val help = "server - start the server"
+case object ControllerCommand extends Parsable {
+  val name = "controller"
+  val help = "controller - start a microgrid controller"
   val defaultPort: Int = 8080
 
 
@@ -32,11 +31,11 @@ case object ServerCommand extends Parsable {
     for {
       _ <- parseErrors(result) // Bail out if any errors in find
       port <- parsePort(result, defaultPort)
-    } yield ServerCommand(port)
+    } yield ControllerCommand(port)
   }
 }
 
-case class ServerCommand(port: Int = 8080) extends Command {
+case class ControllerCommand(port: Int = 8080) extends Command {
   val uri: Uri = Uri("http://localhost").withPort(port)
   def run(context: CommandContext): Try[CommandResponse.DeviceResponse] = {
     implicit def actorSystem: ActorSystem = context.actorSystem
@@ -44,15 +43,15 @@ case class ServerCommand(port: Int = 8080) extends Command {
     Try(Await.ready(nameFuture, Duration.Inf)) match {
       case Success(f) => f.value.get match {
         case Success(binding) => Success(CommandResponse.DeviceResponse(binding.name, DeviceDescriptor.GC, binding.uri))
-        case Failure(_: TimeoutException) => Failure(CommandError.ServerError(ServerError.Timeout))
-        case Failure(_: InterruptedException) => Failure(CommandError.ServerError(ServerError.Interrupted))
-        case Failure(error) if error.getCause.isInstanceOf[BindException] => Failure(CommandError.ServerError(ServerError.BindingError(error.getCause.getMessage)))
-        case Failure(error: ServerError.DuplicateUri) => Failure(CommandError.ServerError(error))
+        case Failure(_: TimeoutException) => Failure(CommandError.ServerError(DeviceError.Timeout))
+        case Failure(_: InterruptedException) => Failure(CommandError.ServerError(DeviceError.Interrupted))
+        case Failure(error) if error.getCause.isInstanceOf[BindException] => Failure(CommandError.ServerError(DeviceError.BindingError(error.getCause.getMessage)))
+        case Failure(error: DeviceError.DuplicateUri) => Failure(CommandError.ServerError(error))
         case Failure(error) =>
           println(error)
           throw new IllegalStateException(s"unexpected server error: $error")
       }
-      case Failure(_) => Failure(CommandError.ServerError(ServerError.Timeout))
+      case Failure(_) => Failure(CommandError.ServerError(DeviceError.Timeout))
     }
   }
 }

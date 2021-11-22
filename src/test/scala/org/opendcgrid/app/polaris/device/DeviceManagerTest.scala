@@ -4,7 +4,6 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.model.Uri
 import org.opendcgrid.app.polaris.PolarisTestUtilities
 import org.opendcgrid.app.polaris.command.CommandTestUtilities.TestCommandContext
-import org.opendcgrid.app.polaris.server.ServerError
 
 import java.util.concurrent.Semaphore
 import scala.concurrent.duration.Duration
@@ -75,7 +74,7 @@ class DeviceManagerTest extends org.scalatest.funsuite.AnyFunSuite {
     val futureResult = Try(Await.result(future, Duration.Inf))
     futureResult match {
       case Success(_) => fail("expected failure not delivered")
-      case Failure(ServerError.NotFound(_)) => // Pass
+      case Failure(DeviceError.NotFound(_)) => // Pass
       case Failure(error) => fail(s"unexpected error: $error")
     }
   }

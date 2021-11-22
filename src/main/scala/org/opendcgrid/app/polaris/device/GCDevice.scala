@@ -1,32 +1,31 @@
-package org.opendcgrid.app.polaris.server
+package org.opendcgrid.app.polaris.device
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{HttpRequest, HttpResponse, Uri}
 import akka.http.scaladsl.server.Directives._
-import org.opendcgrid.app.polaris.server.device.{DeviceResource, PolarisDeviceHandler}
-import org.opendcgrid.app.polaris.server.gc.{GcResource, PolarisGCHandler}
-import org.opendcgrid.app.polaris.server.subscription.{PolarisSubscriptionHandler, SubscriptionResource}
-import org.opendcgrid.app.polaris.device.Device
+import org.opendcgrid.app.polaris.server.device.DeviceResource
+import org.opendcgrid.app.polaris.server.gc.GcResource
+import org.opendcgrid.app.polaris.server.subscription.SubscriptionResource
 
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
 
-object PolarisServer {
+object GCDevice {
   def apply(uri: Uri, name: String)(implicit actorSystem: ActorSystem): Future[Device] = {
     implicit val context: ExecutionContext = actorSystem.dispatcher
     implicit val requester: HttpRequest => Future[HttpResponse] = Http().singleRequest(_)
-    val subscriptionHandler = new PolarisSubscriptionHandler
+    val subscriptionHandler = new GCSubscriptionHandler
     val subscriptionRoutes = SubscriptionResource.routes(subscriptionHandler)
-    val deviceHandler = new PolarisDeviceHandler(uri, subscriptionHandler)
+    val deviceHandler = new GCDeviceHandler(uri, subscriptionHandler)
     val deviceRoutes = DeviceResource.routes(deviceHandler)
-    val gcRoutes = GcResource.routes(new PolarisGCHandler(deviceHandler, subscriptionHandler))
+    val gcRoutes = GcResource.routes(new GCHandler(deviceHandler, subscriptionHandler))
     val routes = deviceRoutes ~ gcRoutes ~ subscriptionRoutes
-    Http().newServerAt(uri.authority.host.toString(), uri.authority.port).bindFlow(routes).map(binding => new PolarisServer(binding))
+    Http().newServerAt(uri.authority.host.toString(), uri.authority.port).bindFlow(routes).map(binding => new GCDevice(binding))
   }
 }
 
-class PolarisServer(val serverBinding: Http.ServerBinding) extends Device {
+class GCDevice(val serverBinding: Http.ServerBinding) extends Device {
   override def terminate(): Future[Http.HttpTerminated] = serverBinding.terminate(FiniteDuration(1, "seconds"))
 }
 /*

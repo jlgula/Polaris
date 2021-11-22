@@ -5,8 +5,7 @@ import akka.http.scaladsl.model.Uri
 import org.opendcgrid.app.polaris.PolarisAppOptionTag
 import org.opendcgrid.app.polaris.command.Command.parseErrors
 import org.opendcgrid.app.polaris.command.CommandUtilities.parsePort
-import org.opendcgrid.app.polaris.device.DeviceDescriptor
-import org.opendcgrid.app.polaris.server.ServerError
+import org.opendcgrid.app.polaris.device.{DeviceDescriptor, DeviceError}
 import org.opendcgrid.lib.commandoption.CommandOptionResult
 
 import java.net.BindException
@@ -43,16 +42,16 @@ case class ClientCommand(port: Int = 0) extends Command {
     Try(Await.ready(binding, Duration.Inf)) match {
       case Success(f) => f.value.get match {
         case Success(binding) => Success(CommandResponse.DeviceResponse(binding.name, DeviceDescriptor.GC, binding.uri))
-        case Failure(_: TimeoutException) => Failure(CommandError.ServerError(ServerError.Timeout))
-        case Failure(_: InterruptedException) => Failure(CommandError.ServerError(ServerError.Interrupted))
-        case Failure(error) if error.getCause.isInstanceOf[BindException] => Failure(CommandError.ServerError(ServerError.BindingError(error.getCause.getMessage)))
-        case Failure(error: ServerError.DuplicateUri) => Failure(CommandError.ServerError(error))
+        case Failure(_: TimeoutException) => Failure(CommandError.ServerError(DeviceError.Timeout))
+        case Failure(_: InterruptedException) => Failure(CommandError.ServerError(DeviceError.Interrupted))
+        case Failure(error) if error.getCause.isInstanceOf[BindException] => Failure(CommandError.ServerError(DeviceError.BindingError(error.getCause.getMessage)))
+        case Failure(error: DeviceError.DuplicateUri) => Failure(CommandError.ServerError(error))
         case Failure(CommandError.NoController) => Failure(CommandError.NoController)
         case Failure(error) =>
           println(error)
           throw new IllegalStateException(s"unexpected server error: $error")
       }
-      case Failure(_) => Failure(CommandError.ServerError(ServerError.Timeout))
+      case Failure(_) => Failure(CommandError.ServerError(DeviceError.Timeout))
     }
   }
 }

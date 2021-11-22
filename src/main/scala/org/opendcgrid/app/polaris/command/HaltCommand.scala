@@ -2,7 +2,7 @@ package org.opendcgrid.app.polaris.command
 
 import org.opendcgrid.app.polaris.PolarisAppOptionTag
 import org.opendcgrid.app.polaris.command.Command.parseErrors
-import org.opendcgrid.app.polaris.server.ServerError
+import org.opendcgrid.app.polaris.device.DeviceError
 import org.opendcgrid.lib.commandoption.CommandOptionResult
 
 import scala.concurrent.duration.Duration
@@ -43,7 +43,7 @@ case class HaltCommand(devices: String*) extends Command {
     val commandFuture = Future.sequence(terminationFutures)
     Try(Await.result(commandFuture, Duration.Inf)) match {
       case Success(_) => Success(CommandResponse.MultiResponse(devices.map(CommandResponse.HaltResponse)))
-      case Failure(e: ServerError) => Failure(CommandError.ServerError(e))
+      case Failure(e: DeviceError) => Failure(CommandError.ServerError(e))
       case Failure(error) => throw new IllegalStateException(s"unexpected error: $error")
     }
   }

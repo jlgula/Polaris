@@ -1,7 +1,8 @@
 package org.opendcgrid.app.polaris.command
 
+import org.opendcgrid.app.polaris.device.DeviceError
+
 import java.io.IOException
-import org.opendcgrid.app.polaris.server.{ServerError => SrvError}
 
 sealed abstract class CommandError(val message: String, val exitCode: Int = 1) extends Throwable(message)
 object CommandError {
@@ -33,7 +34,7 @@ object CommandError {
   case class NotFound(thing: String) extends CommandError(s"Not found: $thing")
   case class PortInUse(port: Int) extends CommandError(s"Port number: $port is already in use")
   case class RequestFailed(details: Throwable) extends CommandError(s"Request failed. ${details.getMessage}")
-  case class ServerError(details: SrvError) extends CommandError(s"Server error: ${details.getMessage}")
+  case class ServerError(details: DeviceError) extends CommandError(s"Server error: ${details.getMessage}")
   case class SocketIOError(socketUrl: String, error: IOException) extends CommandError(s"IOException on socket $socketUrl: ${error.getMessage}")
   case class TerminationError(details: String) extends CommandError(s"Error terminating devices: $details")
   case class TracedError(error: CommandError, trace: Seq[String]) extends CommandError(error.getMessage)

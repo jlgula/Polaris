@@ -3,7 +3,6 @@ package org.opendcgrid.app.polaris.device
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.Uri
 import org.opendcgrid.app.polaris.device.DeviceDescriptor.{Client, GC}
-import org.opendcgrid.app.polaris.server.{PolarisServer, ServerError}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -14,10 +13,10 @@ class DeviceManager(implicit actorSystem: ActorSystem) {
 
   def startDevice(descriptor: DeviceDescriptor, nameOption: Option[String], deviceURI: Uri, serverURI: Option[Uri] = None): Future[Binding] = {
     val name = nameOption.getOrElse(selectName(descriptor))
-    if (devices.contains(name)) return Future.failed(ServerError.DuplicateName(name))
-    if (devices.exists { case (_, binding) => binding.uri == deviceURI }) return Future.failed(ServerError.DuplicateUri(deviceURI))
+    if (devices.contains(name)) return Future.failed(DeviceError.DuplicateName(name))
+    if (devices.exists { case (_, binding) => binding.uri == deviceURI }) return Future.failed(DeviceError.DuplicateUri(deviceURI))
     descriptor match {
-      case GC => PolarisServer(deviceURI, name).map(device => Binding(name, descriptor, deviceURI, device)).map(bt => addBinding(bt))
+      case GC => GCDevice(deviceURI, name).map(device => Binding(name, descriptor, deviceURI, device)).map(bt => addBinding(bt))
       case Client => ClientDevice(deviceURI, name, serverURI.get).map(device => Binding(name, descriptor, deviceURI, device)).map(bt => addBinding(bt))
     }
   }
@@ -26,7 +25,7 @@ class DeviceManager(implicit actorSystem: ActorSystem) {
     if (devices.contains(name)) {
       devices(name).device.terminate().andThen(_ => removeBinding(name)).map(_ => ())
     }
-    else Future.failed(ServerError.NotFound(name))
+    else Future.failed(DeviceError.NotFound(name))
   }
 
   def terminateAll(): Future[Unit] = {

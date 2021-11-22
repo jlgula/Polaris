@@ -26,7 +26,7 @@ class ClientCommandTest extends org.scalatest.funsuite.AnyFunSuite {
   test("client command with controller") {
     val context = new TestCommandContext()
     val controllerPort = PolarisTestUtilities.getUnusedPort
-    val controllerCommand = ServerCommand(controllerPort)
+    val controllerCommand = ControllerCommand(controllerPort)
     val controllerResult = controllerCommand.run(context)
     assert(controllerResult.isSuccess)
     val clientCommand = ClientCommand()

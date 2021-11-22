@@ -1,12 +1,12 @@
-package org.opendcgrid.app.polaris.server.subscription
+package org.opendcgrid.app.polaris.device
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
 import org.opendcgrid.app.polaris.server.notification.PostNotificationResponse
+import org.opendcgrid.app.polaris.server.subscription.{SubscriptionHandler, SubscriptionResource}
 //import org.opendcgrid.app.polaris.client.definitions.Notification
 //import org.opendcgrid.app.polaris.client.notification.NotificationResource.PostNotificationResponse
-import org.opendcgrid.app.polaris.server.definitions.Subscription
-import org.opendcgrid.app.polaris.server.definitions.Notification
+import org.opendcgrid.app.polaris.server.definitions.{Notification, Subscription}
 import org.opendcgrid.app.polaris.server.notification.NotificationClient
 import org.opendcgrid.app.polaris.{PolarisError, PolarisHandler}
 
@@ -14,7 +14,7 @@ import java.util.UUID
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
-class PolarisSubscriptionHandler(implicit system: ActorSystem, requester: HttpRequest => Future[HttpResponse]) extends SubscriptionHandler with PolarisHandler {
+class GCSubscriptionHandler(implicit system: ActorSystem, requester: HttpRequest => Future[HttpResponse]) extends SubscriptionHandler with PolarisHandler {
   //implicit val system: ActorSystem = sys
   implicit val executionContext: ExecutionContextExecutor = system.dispatcher
   //implicit val requester: HttpRequest => Future[HttpResponse] = Http().singleRequest(_)

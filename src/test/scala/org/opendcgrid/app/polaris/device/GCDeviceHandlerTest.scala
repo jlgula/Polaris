@@ -1,4 +1,4 @@
-package org.opendcgrid.app.polaris.server.device
+package org.opendcgrid.app.polaris.device
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
@@ -6,25 +6,25 @@ import akka.http.scaladsl.model.{HttpRequest, HttpResponse, Uri}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.testkit.ScalatestRouteTest
+import org.opendcgrid.app.polaris.PolarisTestUtilities
 import org.opendcgrid.app.polaris.client.definitions.{Device => ClientDevice}
 import org.opendcgrid.app.polaris.client.device.{AddDeviceResponse, DeleteDeviceResponse, DeviceClient, GetDeviceResponse, GetPowerAcceptedResponse, GetPowerGrantedResponse, ListDevicesResponse, PutDeviceResponse, PutPowerAcceptedResponse, PutPowerGrantedResponse}
 import org.opendcgrid.app.polaris.client.gc.{GcClient, ResetResponse}
-import org.opendcgrid.app.polaris.PolarisTestUtilities
-import org.opendcgrid.app.polaris.server.gc.{GcResource, PolarisGCHandler}
-import org.opendcgrid.app.polaris.server.subscription.PolarisSubscriptionHandler
+import org.opendcgrid.app.polaris.server.device.DeviceResource
+import org.opendcgrid.app.polaris.server.gc.GcResource
 import org.scalatest.funsuite.AnyFunSuite
 
-import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, Future}
 
-class PolarisDeviceHandlerTest extends AnyFunSuite with ScalatestRouteTest {
+class GCDeviceHandlerTest extends AnyFunSuite with ScalatestRouteTest {
   private val actorSystem = implicitly[ActorSystem]
   val requester: HttpRequest => Future[HttpResponse] = Http().singleRequest(_)
-  private val subscriptionHandler = new PolarisSubscriptionHandler()(actorSystem, requester)
+  private val subscriptionHandler = new GCSubscriptionHandler()(actorSystem, requester)
   private val gcURL = Uri("http://localhost").withPort(PolarisTestUtilities.getUnusedPort)
-  private val deviceHandler = new PolarisDeviceHandler(gcURL, subscriptionHandler)
+  private val deviceHandler = new GCDeviceHandler(gcURL, subscriptionHandler)
   private val deviceRoutes = DeviceResource.routes(deviceHandler)
-  private val gcRoutes = GcResource.routes(new PolarisGCHandler(deviceHandler, subscriptionHandler))
+  private val gcRoutes = GcResource.routes(new GCHandler(deviceHandler, subscriptionHandler))
   private val routes = deviceRoutes ~ gcRoutes
 
   implicit val routeFunction: HttpRequest => Future[HttpResponse] = Route.toFunction(routes)

@@ -1,4 +1,4 @@
-package org.opendcgrid.app.polaris.server.subscription
+package org.opendcgrid.app.polaris.device
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
@@ -6,14 +6,14 @@ import akka.http.scaladsl.model.{HttpRequest, HttpResponse, Uri}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.stream.Materializer
-import org.opendcgrid.app.polaris.client.definitions.{Subscription, Device => ClientDevice}
-import org.opendcgrid.app.polaris.client.device.DeviceClient
-import org.opendcgrid.app.polaris.client.subscription.SubscriptionClient
-import org.opendcgrid.app.polaris.client.definitions.{Notification => ClientNotification}
 import org.opendcgrid.app.polaris.PolarisTestUtilities
-import org.opendcgrid.app.polaris.server.device.{DeviceResource, PolarisDeviceHandler}
-import org.opendcgrid.app.polaris.server.gc.{GcResource, PolarisGCHandler}
+import org.opendcgrid.app.polaris.client.definitions.{Subscription, Device => ClientDevice, Notification => ClientNotification}
+import org.opendcgrid.app.polaris.client.device.DeviceClient
 import org.opendcgrid.app.polaris.client.notification.{NotificationHandler, NotificationResource}
+import org.opendcgrid.app.polaris.client.subscription.SubscriptionClient
+import org.opendcgrid.app.polaris.server.device.DeviceResource
+import org.opendcgrid.app.polaris.server.gc.GcResource
+import org.opendcgrid.app.polaris.server.subscription.SubscriptionResource
 import org.scalatest.funsuite.AnyFunSuite
 
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -79,11 +79,11 @@ class TestFixture {
   private val notificationRoutes = NotificationResource.routes(testHandler)
   val deviceID = "123"
   private val device = ClientDevice(deviceID, "test")
-  private val subscriptionHandler = new PolarisSubscriptionHandler
+  private val subscriptionHandler = new GCSubscriptionHandler
   private val subscriptionRoutes = SubscriptionResource.routes(subscriptionHandler)
-  private val deviceHandler = new PolarisDeviceHandler(gcURL, subscriptionHandler)
+  private val deviceHandler = new GCDeviceHandler(gcURL, subscriptionHandler)
   private val deviceRoutes = DeviceResource.routes(deviceHandler)
-  private val gcRoutes = GcResource.routes(new PolarisGCHandler(deviceHandler, subscriptionHandler))
+  private val gcRoutes = GcResource.routes(new GCHandler(deviceHandler, subscriptionHandler))
   private val serverRoutes = deviceRoutes ~ gcRoutes ~ subscriptionRoutes
   private val observedURL = gcURL.withPath(Uri.Path("/v1/devices/123/powerGranted"))
   private val observerURL = localHost.withPort(observerPort)

@@ -1,16 +1,16 @@
-package org.opendcgrid.app.polaris.server.device
+package org.opendcgrid.app.polaris.device
 
 import akka.http.scaladsl.model.Uri
 import io.circe.syntax._
 import org.opendcgrid.app.polaris.server.definitions.{Device, Notification}
-import org.opendcgrid.app.polaris.server.subscription.{NotificationAction, PolarisSubscriptionHandler}
+import org.opendcgrid.app.polaris.server.device.{DeviceHandler, DeviceResource}
 import org.opendcgrid.app.polaris.{PolarisError, PolarisHandler}
 
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 
 
-class PolarisDeviceHandler(val uri: Uri, val subscriptionHandler: PolarisSubscriptionHandler)(implicit context: ExecutionContext) extends DeviceHandler with PolarisHandler {
+class GCDeviceHandler(val uri: Uri, val subscriptionHandler: GCSubscriptionHandler)(implicit context: ExecutionContext) extends DeviceHandler with PolarisHandler {
   private val devices = mutable.HashMap[String, Device]()
   private val powerGranted = mutable.HashMap[String, BigDecimal]()
   private val powerAccepted = mutable.HashMap[String, BigDecimal]()

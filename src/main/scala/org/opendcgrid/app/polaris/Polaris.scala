@@ -3,7 +3,7 @@ package org.opendcgrid.app.polaris
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.Uri
 import org.opendcgrid.app.polaris.PolarisAppOptionTag.{Client, DevicesOption, Log, Server}
-import org.opendcgrid.app.polaris.command.{ClientCommand, Command, CommandError, CommandUtilities, DevicesCommand, ExitCommand, HaltCommand, HelpCommand, Parsable, ServerCommand, VersionCommand}
+import org.opendcgrid.app.polaris.command.{ClientCommand, Command, CommandError, CommandUtilities, DevicesCommand, ExitCommand, HaltCommand, HelpCommand, Parsable, ControllerCommand, VersionCommand}
 import org.opendcgrid.app.polaris.device.{DeviceDescriptor, DeviceManager}
 import org.opendcgrid.app.polaris.shell.{Shell, ShellConfiguration, ShellContext}
 import org.opendcgrid.lib.commandoption.StandardCommandOptionTag.{Help, Output, Version}
@@ -28,11 +28,11 @@ class Polaris(context: AppContext) extends ShellContext {
 
   override def allCommands: Seq[Parsable] = Seq[Parsable](
     ClientCommand,
+    ControllerCommand,
     DevicesCommand,
     ExitCommand,
     HaltCommand,
     HelpCommand,
-    ServerCommand,
     VersionCommand
   )
 
@@ -95,9 +95,9 @@ class Polaris(context: AppContext) extends ShellContext {
   private def startServer(result: CommandOptionResult): Int = {
     if (!result.options.contains(PolarisAppOption.Server)) 0
     else {
-      CommandUtilities.parsePort(result, ServerCommand.defaultPort) match {
+      CommandUtilities.parsePort(result, ControllerCommand.defaultPort) match {
         case Failure(e: CommandError) => reportAppError(e); e.exitCode
-        case Success(port) => ServerCommand(port).run(this) match {
+        case Success(port) => ControllerCommand(port).run(this) match {
           case Success(response) => out.println(response.toString); 0 // Let it run
           case Failure(error: CommandError) => error.exitCode
           case Failure(other) => throw new IllegalStateException(s"unexpected error: $other")
