@@ -33,8 +33,8 @@ class DevicesCommandTest extends org.scalatest.funsuite.AnyFunSuite {
     val uri1 = Uri("http://localhost").withPort(PolarisTestUtilities.getUnusedPort)
     val uri2 = Uri("http://localhost").withPort(PolarisTestUtilities.getUnusedPort)
     val result = for {
-      _ <- manager.startTask(DeviceDescriptor.GC, None, uri1)
-      _ <- manager.startTask(DeviceDescriptor.GC, None, uri2)
+      _ <- manager.startDevice(DeviceDescriptor.GC, None, uri1)
+      _ <- manager.startDevice(DeviceDescriptor.GC, None, uri2)
     } yield ()
     Await.result(result, Duration.Inf)
     val listResult = DevicesCommand.run(context)

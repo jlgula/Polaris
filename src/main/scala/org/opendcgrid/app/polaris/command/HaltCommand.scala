@@ -39,7 +39,7 @@ case object HaltCommand extends Parsable {
 case class HaltCommand(devices: String*) extends Command {
   def run(context: CommandContext): Try[CommandResponse] = {
     implicit val ec: ExecutionContext = context.actorSystem.dispatcher
-    val terminationFutures = devices.map(context.deviceManager.terminateTask(_))
+    val terminationFutures = devices.map(context.deviceManager.terminateDevice(_))
     val commandFuture = Future.sequence(terminationFutures)
     Try(Await.result(commandFuture, Duration.Inf)) match {
       case Success(_) => Success(CommandResponse.MultiResponse(devices.map(CommandResponse.HaltResponse)))

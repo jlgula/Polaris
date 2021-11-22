@@ -32,6 +32,7 @@ class ClientCommandTest extends org.scalatest.funsuite.AnyFunSuite {
     val clientCommand = ClientCommand()
     val clientResult = clientCommand.run(context)
     assert(clientResult.isSuccess)
-    Await.result(context.deviceManager.terminateAll(), Duration.Inf)
+    Await.result(context.deviceManager.terminateDevice(clientResult.get.name), Duration.Inf)
+    Await.result(context.deviceManager.terminateDevice(controllerResult.get.name), Duration.Inf)
   }
 }

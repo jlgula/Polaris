@@ -7,11 +7,13 @@ import akka.http.scaladsl.server.Directives._
 import org.opendcgrid.app.polaris.server.device.{DeviceResource, PolarisDeviceHandler}
 import org.opendcgrid.app.polaris.server.gc.{GcResource, PolarisGCHandler}
 import org.opendcgrid.app.polaris.server.subscription.{PolarisSubscriptionHandler, SubscriptionResource}
+import org.opendcgrid.app.polaris.device.Device
 
+import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
 
 object PolarisServer {
-  def apply(uri: Uri, name: String)(implicit actorSystem: ActorSystem): Future[Http.ServerBinding] = {
+  def apply(uri: Uri, name: String)(implicit actorSystem: ActorSystem): Future[Device] = {
     implicit val context: ExecutionContext = actorSystem.dispatcher
     implicit val requester: HttpRequest => Future[HttpResponse] = Http().singleRequest(_)
     val subscriptionHandler = new PolarisSubscriptionHandler
@@ -20,8 +22,12 @@ object PolarisServer {
     val deviceRoutes = DeviceResource.routes(deviceHandler)
     val gcRoutes = GcResource.routes(new PolarisGCHandler(deviceHandler, subscriptionHandler))
     val routes = deviceRoutes ~ gcRoutes ~ subscriptionRoutes
-    Http().newServerAt(uri.authority.host.toString(), uri.authority.port).bindFlow(routes)
+    Http().newServerAt(uri.authority.host.toString(), uri.authority.port).bindFlow(routes).map(binding => new PolarisServer(binding))
   }
+}
+
+class PolarisServer(val serverBinding: Http.ServerBinding) extends Device {
+  override def terminate(): Future[Http.HttpTerminated] = serverBinding.terminate(FiniteDuration(1, "seconds"))
 }
 /*
 class PolarisServer(val uri: Uri, val name: String, taskManager: TaskManager) (implicit actorSystem: ActorSystem) extends Task {

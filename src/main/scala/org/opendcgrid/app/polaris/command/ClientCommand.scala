@@ -37,7 +37,7 @@ case class ClientCommand(port: Int = 0) extends Command {
     implicit def ec: ExecutionContext = actorSystem.dispatcher
     val binding = for {
       controllerURI <- context.locateController
-      binding <- context.deviceManager.startTask(DeviceDescriptor.Client, None, uri, Some(controllerURI))
+      binding <- context.deviceManager.startDevice(DeviceDescriptor.Client, None, uri, Some(controllerURI))
     } yield binding
     //val nameFuture = context.taskManager.startTask(DeviceDescriptor.Client, None, uri)
     Try(Await.ready(binding, Duration.Inf)) match {

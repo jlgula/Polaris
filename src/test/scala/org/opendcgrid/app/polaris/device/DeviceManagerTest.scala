@@ -26,16 +26,16 @@ class DeviceManagerTest extends org.scalatest.funsuite.AnyFunSuite {
     val manager = context.deviceManager
     val uri1 = Uri("http://localhost").withPort(PolarisTestUtilities.getUnusedPort)
     val result = for {
-      binding <- manager.startTask(DeviceDescriptor.GC, None, uri1)
-      termination <- manager.terminateTask(binding.name)
+      binding <- manager.startDevice(DeviceDescriptor.GC, None, uri1)
+      termination <- manager.terminateDevice(binding.name)
     } yield termination
     Try(Await.result(result, Duration.Inf)) match {
       case Success(_) => // pass
       case other => fail(s"unexpected result: $other")
     }
     val result2 = for {
-      binding <- manager.startTask(DeviceDescriptor.GC, None, uri1)
-      termination <- manager.terminateTask(binding.name)
+      binding <- manager.startDevice(DeviceDescriptor.GC, None, uri1)
+      termination <- manager.terminateDevice(binding.name)
     } yield termination
     Try(Await.result(result2, Duration.Inf)) match {
       case Success(_) => // pass
@@ -52,8 +52,8 @@ class DeviceManagerTest extends org.scalatest.funsuite.AnyFunSuite {
       val name2 = "name2"
       val uri2 = Uri("http://localhost").withPort(PolarisTestUtilities.getUnusedPort)
       val result = for {
-        _ <- manager.startTask(DeviceDescriptor.GC, Some(name1), uri1)
-        _ <- manager.startTask(DeviceDescriptor.GC, Some(name2), uri2)
+        _ <- manager.startDevice(DeviceDescriptor.GC, Some(name1), uri1)
+        _ <- manager.startDevice(DeviceDescriptor.GC, Some(name2), uri2)
       } yield ()
       Await.result(result, Duration.Inf)
       val listResult = manager.listTasks.toSeq
@@ -71,7 +71,7 @@ class DeviceManagerTest extends org.scalatest.funsuite.AnyFunSuite {
     implicit val ec: ExecutionContextExecutor = context.executionContext
     val manager = context.deviceManager
     val badID = "bad"
-    val future = manager.terminateTask(badID)
+    val future = manager.terminateDevice(badID)
     val futureResult = Try(Await.result(future, Duration.Inf))
     futureResult match {
       case Success(_) => fail("expected failure not delivered")
