@@ -11,4 +11,5 @@ object DeviceError {
   case class NotFound(name: String) extends DeviceError(s"Not found $name")
   case class DuplicateName(name: String) extends DeviceError(s"Name already in use: $name")
   case class DuplicateUri(uri: Uri) extends DeviceError(s"URI already in use: $uri")
+  case class InvalidPowerValue(value: BigDecimal, details: String) extends DeviceError(s"Invalid power value: $value details: $details")
 }
