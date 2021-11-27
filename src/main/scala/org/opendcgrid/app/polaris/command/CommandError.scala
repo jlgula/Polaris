@@ -23,6 +23,7 @@ object CommandError {
   case class InvalidPort(port: Int) extends CommandError(s"Invalid port: $port")
   case class InvalidPortValue(value: String) extends CommandError(s"Invalid port code: ${q(value)}")
   case class InvalidProtocol(value: String) extends CommandError(s"Invalid protocol: $value.")
+  case class InvalidRequest(location: String, details: String) extends CommandError(s"Invalid request to: $location. Details: $details.")
   case class InvalidURL(value: String, details: Throwable) extends CommandError(s"Invalid url: $value. ${details.getMessage}")
   case class MissingArgument(argumentName: String) extends CommandError(s"Argument $argumentName is required")
   case object MissingHost extends CommandError("Host missing in URL")

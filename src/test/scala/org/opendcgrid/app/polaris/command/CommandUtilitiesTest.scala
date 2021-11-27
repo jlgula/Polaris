@@ -1,10 +1,8 @@
 package org.opendcgrid.app.polaris.command
 
-import akka.http.scaladsl.model.IllegalUriException
-import akka.stream.StreamTcpException
-import org.opendcgrid.app.polaris.{PolarisAppOptionTag, PolarisTestUtilities}
-import org.opendcgrid.app.polaris.command.CommandTestUtilities.TestCommandContext
+import org.opendcgrid.app.polaris.command.CommandTestUtilities.{TestCommandContext, initializeClientAndServer}
 import org.opendcgrid.app.polaris.command.CommandUtilities.parsePort
+import org.opendcgrid.app.polaris.{PolarisAppOptionTag, PolarisTestUtilities}
 import org.opendcgrid.lib.commandoption.CommandOptionResult
 
 import scala.concurrent.Await
@@ -69,13 +67,5 @@ class CommandUtilitiesTest extends org.scalatest.funsuite.AnyFunSuite {
     parsePort(result, defaultPort)
   }
 
-  def initializeClientAndServer(context: CommandContext): CommandResponse.DeviceResponse = {
-    val port = PolarisTestUtilities.getUnusedPort
-    val controllerResult = ControllerCommand(port).run(context)
-    assert(controllerResult.isSuccess)
-    val clientResult = ClientCommand().run(context)
-    assert(clientResult.isSuccess)
-    clientResult.get
-  }
 
 }
