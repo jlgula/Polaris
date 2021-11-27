@@ -4,6 +4,7 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.coding.Coders
 import akka.http.scaladsl.model.headers.HttpEncodings
 import akka.http.scaladsl.unmarshalling.Unmarshal
+import akka.http.scaladsl.util.FastFuture
 import akka.http.scaladsl.{Http, model}
 import akka.stream.StreamTcpException
 import org.opendcgrid.app.polaris.command.Command.parseErrors
@@ -47,19 +48,29 @@ case class GetCommand(target: String) extends Command {
     implicit def system: ActorSystem = context.actorSystem
     implicit def ec: ExecutionContext = system.dispatcher
     val bodyFuture = for {
-      uri <- Future.fromTry(Try(Uri.parseAbsolute(target)))
+      uri <- CommandUtilities.getURI(context, target)
       response <- Http().singleRequest(model.HttpRequest(GET, uri))
-      text <- decodeResponse(context, response)
+      text <- validateResponse(uri, context, response)
     } yield text
     Try(Await.ready(bodyFuture, Duration.Inf)) match {
       case Success(f) => f.value.get match {
         case Success(text) => Success(CommandResponse.TextResponse(text))
         case Failure(error: IllegalUriException) => Failure(CommandError.InvalidURL(target, error))
         case Failure(error: StreamTcpException) => Failure(CommandError.InvalidURL(target, error))
+        case Failure(error: CommandError) => Failure(error)
         case Failure(error) => throw new IllegalStateException(s"unexpected error: $error")
       }
       case Failure(error) => throw new IllegalStateException(s"unexpected error: $error")
     }
+  }
+
+  def validateResponse(uri: Uri, context: CommandContext, response: HttpResponse): Future[String] =  response.status match {
+    case StatusCodes.OK => decodeResponse(context, response)
+    case StatusCodes.NoContent => FastFuture.successful("")
+    case StatusCodes.NotFound => FastFuture.failed(CommandError.NotFound(uri.toString()))
+    case _ =>
+      if (response.status.isFailure()) FastFuture.failed(CommandError.UnexpectedResponse(response.status.reason()))
+      else FastFuture.successful("")
   }
 
   def decodeResponse(context: CommandContext, response: HttpResponse): Future[String] = {
@@ -73,7 +84,7 @@ case class GetCommand(target: String) extends Command {
       case HttpEncodings.identity =>
         Coders.NoCoding
       case _ =>
-       Coders.NoCoding
+        Coders.NoCoding
     }
 
     val decodedResponse = decoder.decodeMessage(response)

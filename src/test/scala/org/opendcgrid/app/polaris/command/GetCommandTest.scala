@@ -15,10 +15,18 @@ class GetCommandTest extends org.scalatest.funsuite.AnyFunSuite {
 
   test("get command with bad URI") {
     val context = new TestCommandContext()
+
+    // Start a controller so the name parsing won't fail with No Controller.
+    val controllerPort = PolarisTestUtilities.getUnusedPort
+    val controllerCommand = ControllerCommand(controllerPort)
+    val controllerResult = controllerCommand.run(context)
+    assert(controllerResult.isSuccess)
+
     val command = GetCommand("foo")
     val result = command.run(context)
     result match {
       case Failure(CommandError.InvalidURL("foo", _)) => // Pass
+      case Failure(CommandError.NotFound("foo")) => // Pass
       case other => fail(s"unexpected response: $other")
     }
   }

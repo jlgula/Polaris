@@ -3,7 +3,7 @@ package org.opendcgrid.app.polaris
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.Uri
 import org.opendcgrid.app.polaris.PolarisAppOptionTag.{Client, DevicesOption, Log, Server}
-import org.opendcgrid.app.polaris.command.{ClientCommand, Command, CommandError, CommandUtilities, ControllerCommand, DevicesCommand, ExitCommand, GetCommand, HaltCommand, HelpCommand, Parsable, VersionCommand}
+import org.opendcgrid.app.polaris.command.{ClientCommand, Command, CommandError, CommandUtilities, ControllerCommand, DevicesCommand, ExitCommand, GetCommand, HaltCommand, HelpCommand, Parsable, PutCommand, VersionCommand}
 import org.opendcgrid.app.polaris.device.DeviceManager
 import org.opendcgrid.app.polaris.shell.{Shell, ShellConfiguration, ShellContext}
 import org.opendcgrid.lib.commandoption.StandardCommandOptionTag.{Help, Output, Version}
@@ -34,6 +34,7 @@ class Polaris(context: AppContext) extends ShellContext {
     GetCommand,
     HaltCommand,
     HelpCommand,
+    PutCommand,
     VersionCommand
   )
 
