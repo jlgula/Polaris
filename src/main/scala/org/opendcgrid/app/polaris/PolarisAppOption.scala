@@ -11,6 +11,7 @@ object PolarisAppOptionTag {
   case object Log extends OneArgumentTag(PolarisAppOption.Log.apply, "log")
   case object Port extends OneArgumentTag(PolarisAppOption.Port.apply, "port")
   case object Server extends ZeroArgumentTag(PolarisAppOption.Server, "server")
+  case object Settings extends ZeroArgumentTag(PolarisAppOption.Settings, "settings")
   case object Shell extends ZeroArgumentTag(PolarisAppOption.Shell, "shell")
 }
 
@@ -51,6 +52,11 @@ object PolarisAppOption {
    * [[CommandOption]] that indicates that a server should be started.
    */
   case object Server extends CommandOption
+
+  /**
+   * [[CommandOption]] that indicates that configuration settings should be displayed.
+   */
+  case object Settings extends CommandOption
 
   /**
    * [[CommandOption]] that indicates that a shell should be started after loading files.

@@ -19,6 +19,12 @@ class PolarisTest extends org.scalatest.funsuite.AnyFunSuite {
     assert(fixture.output.nonEmpty)
   }
 
+  test("settings option") {
+    val fixture = new PolarisTestFixture()
+    fixture.run(Seq("--settings"))
+    assert(fixture.output.nonEmpty)
+  }
+
   test("start then halt server") {
     val fixture = new PolarisTestFixture()
     fixture.run(Seq("--server --halt"))

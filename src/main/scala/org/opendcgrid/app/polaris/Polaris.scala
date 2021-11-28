@@ -2,8 +2,8 @@ package org.opendcgrid.app.polaris
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.Uri
-import org.opendcgrid.app.polaris.PolarisAppOptionTag.{Client, DevicesOption, Log, Server}
-import org.opendcgrid.app.polaris.command.{ClientCommand, Command, CommandError, CommandUtilities, ControllerCommand, DevicesCommand, ExitCommand, GetCommand, HaltCommand, HelpCommand, Parsable, PutCommand, VersionCommand}
+import org.opendcgrid.app.polaris.PolarisAppOptionTag.{Client, DevicesOption, Log, Server, Settings}
+import org.opendcgrid.app.polaris.command.{ClientCommand, Command, CommandError, CommandUtilities, ControllerCommand, DevicesCommand, ExitCommand, GetCommand, HaltCommand, HelpCommand, Parsable, PutCommand, SettingsCommand, VersionCommand}
 import org.opendcgrid.app.polaris.device.DeviceManager
 import org.opendcgrid.app.polaris.shell.{Shell, ShellConfiguration, ShellContext}
 import org.opendcgrid.lib.commandoption.StandardCommandOptionTag.{Help, Output, Version}
@@ -35,10 +35,11 @@ class Polaris(context: AppContext) extends ShellContext {
     HaltCommand,
     HelpCommand,
     PutCommand,
+    SettingsCommand,
     VersionCommand
   )
 
-  def options = Seq(Client, DevicesOption, Help, Log, Output, Server, PolarisAppOptionTag.Shell, Version)
+  def options = Seq(Client, DevicesOption, Help, Log, Output, Server, Settings, PolarisAppOptionTag.Shell, Version)
 
   override def writeFile(fileName: String, data: Array[Byte]): Try[Unit] = context.writeFile(fileName, data)
 
@@ -79,6 +80,7 @@ class Polaris(context: AppContext) extends ShellContext {
       case _ if result.options.contains(StandardCommandOption.Help) => runShellCommand(HelpCommand(Nil))
       case _ if result.options.contains(StandardCommandOption.Version) => runShellCommand(VersionCommand())
       case _ if result.options.contains(PolarisAppOption.Devices) => runShellCommand(DevicesCommand)
+      case _ if result.options.contains(PolarisAppOption.Settings) => runShellCommand(SettingsCommand(Nil))
       //case _ if result.options.contains(PolarisAppOption.Server) => runShellCommand(ServerCommand())
       case _ if result.options.contains(PolarisAppOption.Shell) => runShell()
       case _ if result.options.contains(PolarisAppOption.Halt) => terminateDevices(); 0 // used to test device options
