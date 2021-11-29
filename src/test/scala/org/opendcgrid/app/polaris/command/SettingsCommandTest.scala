@@ -9,10 +9,10 @@ class SettingsCommandTest extends org.scalatest.funsuite.AnyFunSuite {
   test("settings command") {
     val fixture = new ShellTestFixture()
     val shell = fixture.shell
-    val command = SettingsCommand(Nil)
+    val command = SettingsCommand(Nil, showOrigin = false)
     val result = shell.runCommand(command)
     result match {
-      case Success(CommandResponse.TextResponse(_)) => // pass
+      case Success(CommandResponse.MultiResponse(_)) => // pass
       case other => fail(s"unexpected result: $other")
     }
   }

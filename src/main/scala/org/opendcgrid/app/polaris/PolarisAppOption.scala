@@ -9,6 +9,7 @@ object PolarisAppOptionTag {
   case object DevicesOption extends ZeroArgumentTag(PolarisAppOption.Devices, "devices")
   case object HaltOption extends ZeroArgumentTag(PolarisAppOption.Halt, "halt")
   case object Log extends OneArgumentTag(PolarisAppOption.Log.apply, "log")
+  case object Origin extends ZeroArgumentTag(PolarisAppOption.Origin, "origin")
   case object Port extends OneArgumentTag(PolarisAppOption.Port.apply, "port")
   case object Server extends ZeroArgumentTag(PolarisAppOption.Server, "server")
   case object Settings extends ZeroArgumentTag(PolarisAppOption.Settings, "settings")
@@ -37,6 +38,11 @@ object PolarisAppOption {
   case object Halt extends CommandOption
 
   case class Log(level: String) extends CommandOption
+
+  /**
+   * [[CommandOption]] that tells polaris to display the origin of any settings
+   */
+  case object Origin extends CommandOption
 
   case object Port {
     def unapply(result: CommandOptionResult): Option[Port] = result.options.collectFirst { case o: Port => o }

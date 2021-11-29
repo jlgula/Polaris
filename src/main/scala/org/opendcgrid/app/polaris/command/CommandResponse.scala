@@ -22,4 +22,5 @@ object CommandResponse {
 
   case class HaltResponse(name: String) extends CommandResponse(s"Device halted: $name")
 
+  case class SettingsResponse(path: String, value: String, origin: Option[String] = None) extends CommandResponse(s"$path:$value${origin.map(o => s"@$o").getOrElse("")}")
 }

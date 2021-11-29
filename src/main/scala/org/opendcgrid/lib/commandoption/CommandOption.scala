@@ -6,6 +6,24 @@ abstract class CommandOption {
   //def unapply(result: CommandOptionResult): Option[CommandOption[T]] = result.options.collectFirst{case o: T => o}
 }
 
+/**
+ * Defines a command line option.
+ *
+ * Usage:
+ * {{{
+ *  val result = CommandOptionResult.parse(args, options)
+    result match {
+      case StandardCommandOption.input(option) => doSomething(option.inputName)
+    }
+
+    run(result.values)  // values contains all the arguments not captured by options
+
+ * }}}
+ *
+ * @param name  the long form of the option as in "--version"
+ * @param shortForm the single character form of the option, if any as in "-v"
+ * @param parameterCount  the number of parameters expected after the option
+ */
 abstract class CommandOptionTag(val name: String, val shortForm: Option[String] = None, val parameterCount: Int = 0) {
   def parse(arguments: Seq[String]): Try[CommandOption]
 }

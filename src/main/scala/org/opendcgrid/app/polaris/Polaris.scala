@@ -80,7 +80,7 @@ class Polaris(context: AppContext) extends ShellContext {
       case _ if result.options.contains(StandardCommandOption.Help) => runShellCommand(HelpCommand(Nil))
       case _ if result.options.contains(StandardCommandOption.Version) => runShellCommand(VersionCommand())
       case _ if result.options.contains(PolarisAppOption.Devices) => runShellCommand(DevicesCommand)
-      case _ if result.options.contains(PolarisAppOption.Settings) => runShellCommand(SettingsCommand(Nil))
+      case _ if result.options.contains(PolarisAppOption.Settings) => runShellCommand(SettingsCommand(Nil, showOrigin = false))
       //case _ if result.options.contains(PolarisAppOption.Server) => runShellCommand(ServerCommand())
       case _ if result.options.contains(PolarisAppOption.Shell) => runShell()
       case _ if result.options.contains(PolarisAppOption.Halt) => terminateDevices(); 0 // used to test device options
