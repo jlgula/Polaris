@@ -61,6 +61,8 @@ class Polaris(context: AppContext) extends ShellContext {
    * @return The exit code for the application. An exit code of 0 means normal exit. Non zero values mean various errors. See TBD for specifics.
    */
   def run(args: Seq[String]): Int = {
+    //println(actorSystem.settings.config.getString("polaris.name"))
+    //actorSystem.log.info("polaris starting")
     val result = CommandOptionResult.parse(args, options)
     val commandErrors = result.errors.collect { case e: CommandOptionError => mapError(e) }
     if (commandErrors.nonEmpty) {

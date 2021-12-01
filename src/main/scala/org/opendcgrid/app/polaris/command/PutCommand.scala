@@ -50,11 +50,12 @@ case class PutCommand(target: String, value: String) extends Command {
       uri <- CommandUtilities.getURI(context, target)
       entity <- parseValue(value)
       response <- Http().singleRequest(model.HttpRequest(PUT, uri, entity = entity))
-      text <- validateResponse(uri, context, response)
+      text <- validateResponse(uri, response)
     } yield text
     Try(Await.ready(responseFuture, Duration.Inf)) match {
       case Success(f) => f.value.get match {
         case Success("") => Success(CommandResponse.NullResponse)
+        case Success(other) => throw new IllegalStateException(s"unexpected response: $other")
         case Failure(error: IllegalUriException) => Failure(CommandError.InvalidURL(target, error))
         case Failure(error: StreamTcpException) => Failure(CommandError.InvalidURL(target, error))
         case Failure(error: CommandError) => Failure(error)
@@ -64,7 +65,7 @@ case class PutCommand(target: String, value: String) extends Command {
     }
   }
 
-  def validateResponse(uri: Uri, context: CommandContext, response: HttpResponse): Future[String] =  response.status match {
+  def validateResponse(uri: Uri, response: HttpResponse): Future[String] =  response.status match {
     case StatusCodes.NoContent => FastFuture.successful("")
     case StatusCodes.NotFound => FastFuture.failed(CommandError.NotFound(uri.toString()))
     case StatusCodes.BadRequest => FastFuture.failed(CommandError.InvalidRequest(uri.toString(), response.status.reason()))
