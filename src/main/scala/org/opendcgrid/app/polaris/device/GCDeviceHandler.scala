@@ -1,5 +1,6 @@
 package org.opendcgrid.app.polaris.device
 
+import akka.actor.ActorSystem
 import akka.http.scaladsl.model.Uri
 import io.circe.syntax._
 import org.opendcgrid.app.polaris.server.definitions.{Device, Notification}
@@ -10,7 +11,8 @@ import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 
 
-class GCDeviceHandler(val uri: Uri, val subscriptionHandler: GCSubscriptionHandler)(implicit context: ExecutionContext) extends DeviceHandler with PolarisHandler {
+class GCDeviceHandler(val uri: Uri, val subscriptionHandler: GCSubscriptionHandler)(implicit system: ActorSystem) extends DeviceHandler with PolarisHandler {
+  implicit val context: ExecutionContext = system.dispatcher
   private val devices = mutable.HashMap[String, Device]()
   private val powerGranted = mutable.HashMap[String, BigDecimal]()
   private val powerAccepted = mutable.HashMap[String, BigDecimal]()
@@ -20,6 +22,7 @@ class GCDeviceHandler(val uri: Uri, val subscriptionHandler: GCSubscriptionHandl
     if (devices.contains(body.id)) {
       Future.successful(respond.BadRequest("Device exists"))
     } else {
+      //system.log.info("device added: {}", body.toString)
       devices.put(body.id, body)
       val notificationsFuture = subscriptionHandler.notify(Notification("v1/devices", NotificationAction.Post.value, body.asJson.toString()))
       notificationsFuture.map(_ => respond.Created(body.id))
