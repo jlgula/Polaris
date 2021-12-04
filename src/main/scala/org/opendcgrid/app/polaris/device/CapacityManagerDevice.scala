@@ -5,20 +5,21 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{HttpRequest, HttpResponse, Uri}
 import org.opendcgrid.app.polaris.client.definitions.{Notification, Subscription, Device => DefinedDevice}
 import org.opendcgrid.app.polaris.client.device.AddDeviceResponse.{BadRequest, Created}
-import org.opendcgrid.app.polaris.client.device.{AddDeviceResponse, DeleteDeviceResponse, DeviceClient, GetPowerGrantedResponse, ListDevicesResponse}
+import org.opendcgrid.app.polaris.client.device.{AddDeviceResponse, DeleteDeviceResponse, DeviceClient, GetPowerGrantedResponse, ListDevicesResponse, PutPowerAcceptedResponse, PutPowerGrantedResponse}
 import org.opendcgrid.app.polaris.client.notification.NotificationHandler
 import org.opendcgrid.app.polaris.client.subscription.{AddSubscriptionResponse, SubscriptionClient}
-import org.opendcgrid.app.polaris.device.PowerManagerDevice.{DeviceSubscription, PowerManagerNotificationReflector}
-
+import org.opendcgrid.app.polaris.command.CommandError
+import org.opendcgrid.app.polaris.device.CapacityManagerDevice.{DeviceSubscription, PowerManagerNotificationReflector}
 import java.util.UUID
 import scala.concurrent.duration.FiniteDuration
-//import akka.http.scaladsl.server.Directives._
 import org.opendcgrid.app.polaris.client.notification.NotificationResource
 
 import scala.concurrent.{ExecutionContext, Future}
-object PowerManagerDevice {
+object CapacityManagerDevice {
   val powerGrantedPath: Uri.Path = Uri.Path("/self/device/powerGranted")
   val powerAcceptedPath: Uri.Path = Uri.Path("/self/device/powerAccepted")
+  val deviceAddedPath: Uri.Path = Uri.Path("/self/devices/deviceAdded")
+  val deviceRemovedPath: Uri.Path = Uri.Path("/self/devices/deviceRemoved")
   type AddDeviceFutureResponse = Either[Either[Throwable, HttpResponse], AddDeviceResponse]
   type AddSubscriptionFutureResponse = Either[Either[Throwable, HttpResponse], AddSubscriptionResponse]
   type GetPowerGrantedFutureResponse = Either[Either[Throwable, HttpResponse], GetPowerGrantedResponse]
@@ -34,7 +35,7 @@ object PowerManagerDevice {
 
   case class DeviceSubscription(deviceID: String, subscriptionID: String)
 
-  def apply(deviceURI: Uri, name: String, serverURI: Uri)(implicit actorSystem: ActorSystem): Future[PowerManagerDevice] = {
+  def apply(deviceURI: Uri, name: String, serverURI: Uri)(implicit actorSystem: ActorSystem): Future[CapacityManagerDevice] = {
     new DeviceBuilder(deviceURI, name, serverURI).build()
   }
 
@@ -49,12 +50,12 @@ object PowerManagerDevice {
     private val notificationRoutes = NotificationResource.routes(reflector)
     private val routes = notificationRoutes // ~ gcRoutes ~ subscriptionRoutes
 
-    def build(): Future[PowerManagerDevice] = {
+    def build(): Future[CapacityManagerDevice] = {
       for {
         serverBinding <- Http().newServerAt(deviceURI.authority.host.toString(), deviceURI.authority.port).bindFlow(routes)
         deviceID <- addDevice(deviceClient, deviceProperties)
         devices <- subscribeToDevices()
-      } yield new PowerManagerDevice(
+      } yield new CapacityManagerDevice(
         deviceURI,
         serverURI,
         deviceProperties,
@@ -109,7 +110,7 @@ object PowerManagerDevice {
 }
 
 
-class PowerManagerDevice(
+class CapacityManagerDevice(
                     val uri: Uri,
                     val serverURI: Uri,
                     val properties: DefinedDevice,
@@ -119,8 +120,25 @@ class PowerManagerDevice(
                     val subscriptionClient: SubscriptionClient,
                     val devices: Seq[DeviceSubscription],
                     val serverID: String)
-                        (implicit actorSystem: ActorSystem) extends Device with NotificationHandler {
+                           (implicit actorSystem: ActorSystem) extends Device with NotificationHandler {
   implicit val context: ExecutionContext = actorSystem.dispatcher
+  val manager = new CapacityManager(grantMethod, acceptMethod)
+
+  private def grantMethod(id: DeviceID, value: PowerValue): Future[Unit] = {
+    deviceClient.putPowerGranted(id, value).value.map {
+      case Right(PutPowerGrantedResponse.NoContent) => ()
+      case other => CommandError.UnexpectedResponse(other.toString)
+    }
+  }
+
+  private def acceptMethod(id: DeviceID, value: PowerValue): Future[Unit] = {
+    deviceClient.putPowerAccepted(id, value).value.map {
+      case Right(PutPowerAcceptedResponse.NoContent) => ()
+      case other => CommandError.UnexpectedResponse(other.toString)
+    }
+  }
+
+
   reflector.bind(this)
 
   def terminate(): Future[Http.HttpTerminated] = for {
@@ -135,11 +153,28 @@ class PowerManagerDevice(
   }
 
   override def postNotification(respond: NotificationResource.PostNotificationResponse.type)(body: Notification): Future[NotificationResource.PostNotificationResponse] = body match {
-    case Notification(_, _, _) => Future.successful(respond.NoContent).andThen{ case _ => updateDevices()}
+    case Notification("/v1/devices", NotificationAction.Post.value, encodedDevice) => handleDeviceAdded(respond, encodedDevice)
     case _ => throw new IllegalStateException(s"Unexpected notification: $body")
   }
 
-  private def updateDevices(): Unit = {
-    
+  private def handleDeviceAdded(respond: NotificationResource.PostNotificationResponse.type, encodedDevice: String): Future[NotificationResource.PostNotificationResponse] = {
+    for {
+      device <- parseDevice(encodedDevice)
+      _ <- manager.addDevice(device)
+    } yield respond.NoContent
+
+  }
+
+  private def parseDevice(value: String): Future[DefinedDevice] = {
+    import io.circe._
+    import io.circe.parser._
+    parse(value) match {
+      case Right(jsonValue) =>
+        jsonValue.as[DefinedDevice] match {
+          case Right(device) => Future.successful(device)
+          case Left(error) => Future.failed(CommandError.UnexpectedResponse(error.toString()))
+        }
+      case Left(ParsingFailure(message, underlying)) => Future.failed(CommandError.UnexpectedResponse(s"Invalid JSON value: $underlying details: $message"))
+    }
   }
 }
