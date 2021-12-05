@@ -31,5 +31,5 @@ libraryDependencies ++= Seq(
   "org.scalatest"     %% "scalatest"         % "3.2.9" % Test,
   "org.typelevel"     %% "cats-core"         % "2.6.1",
   "org.slf4j"         % "slf4j-simple"       % "1.7.30",
-  "ch.qos.logback"    % "logback-classic"   % "1.2.5"
+  //"ch.qos.logback"    % "logback-classic"   % "1.2.5"
  )

@@ -18,23 +18,31 @@ class CapacityManager(
   def addDevice(device: DefinedDevice): Future[Seq[PowerAssignment]] = {
     deviceMap.put(device.id, device)
     currentAssignments.put(device.id, PowerAssignment(device.id))
-    reassignPower()
+    AssignPower()
   }
 
   def removeDevice(id: DeviceID): Future[Seq[PowerAssignment]] = {
     deviceMap.remove(id)
     currentAssignments.remove(id)
-    reassignPower()
+    AssignPower()
   }
 
   def updateDevice(device: DefinedDevice): Future[Seq[PowerAssignment]] = {
     deviceMap.put(device.id, device)
-    reassignPower()
+    AssignPower()
   }
 
   def getPowerAssignment(id: String): PowerAssignment = currentAssignments(id)
 
-  private def reassignPower(): Future[Seq[PowerAssignment]] = {
+  /**
+   * Assigns power to all devices.
+   *
+   * This should be invoked once to initialize the manager.
+   * After that, activity will follow the notifications of power changes.
+   *
+   * @return  a sequence of all devices that had power assignments wrapped in a Future
+   */
+  def AssignPower(): Future[Seq[PowerAssignment]] = {
 
     val powerValues =  deviceMap.values.map(device => (device.powerRequested.getOrElse(PowerValue(0)), device.powerOffered.getOrElse(PowerValue(0))))
 
