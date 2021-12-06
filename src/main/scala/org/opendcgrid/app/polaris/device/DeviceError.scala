@@ -12,4 +12,5 @@ object DeviceError {
   case class DuplicateName(name: String) extends DeviceError(s"Name already in use: $name")
   case class DuplicateUri(uri: Uri) extends DeviceError(s"URI already in use: $uri")
   case class InvalidPowerValue(value: BigDecimal, details: String) extends DeviceError(s"Invalid power value: $value details: $details")
+  case class UnexpectedResponse(response: String) extends DeviceError(s"Unexpected response: $response")
 }

@@ -26,7 +26,7 @@ class DeviceManager(implicit actorSystem: ActorSystem) {
     if (devices.contains(properties.name)) return Future.failed(DeviceError.DuplicateName(properties.name))
     if (devices.exists { case (_, binding) => binding.uri == deviceURI }) return Future.failed(DeviceError.DuplicateUri(deviceURI))
     descriptor match {
-      case GC => GCDevice(deviceURI, properties.name).map(device => Binding(properties.name, descriptor, deviceURI, device)).map(bt => addBinding(bt))
+      case GC => GCDevice(deviceURI, properties).map(device => Binding(properties.name, descriptor, deviceURI, device)).map(bt => addBinding(bt))
       case Client => ClientDevice(deviceURI, properties, controllerURI.get).map(device => Binding(properties.name, descriptor, deviceURI, device)).map(bt => addBinding(bt))
       case CapacityManager => ClientDevice(deviceURI, properties, controllerURI.get).map(device => Binding(properties.name, descriptor, deviceURI, device)).map(bt => addBinding(bt))
     }

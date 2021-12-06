@@ -5,20 +5,22 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{HttpRequest, HttpResponse, Uri}
 import org.opendcgrid.app.polaris.client.definitions.{Notification, Subscription, Device => DeviceProperties}
 import org.opendcgrid.app.polaris.client.device.AddDeviceResponse._
-import org.opendcgrid.app.polaris.client.device.GetPowerGrantedResponse.OK
 import org.opendcgrid.app.polaris.client.device.{AddDeviceResponse, DeleteDeviceResponse, DeviceClient, GetPowerGrantedResponse}
 import org.opendcgrid.app.polaris.client.notification.NotificationHandler
 import org.opendcgrid.app.polaris.client.subscription.{AddSubscriptionResponse, SubscriptionClient}
-import org.opendcgrid.app.polaris.device.ClientDevice.ClientNotificationReflector
+import org.opendcgrid.app.polaris.device.ClientDevice.{ClientNotificationReflector, ClientSubscriptions}
+
 import scala.concurrent.duration.FiniteDuration
 //import akka.http.scaladsl.server.Directives._
+import io.circe._
+import io.circe.parser._
 import org.opendcgrid.app.polaris.client.notification.NotificationResource
 
 import scala.concurrent.{ExecutionContext, Future}
 
 object ClientDevice {
-  val powerGrantedPath: Uri.Path = Uri.Path("/self/device/powerGranted")
-  val powerAcceptedPath: Uri.Path = Uri.Path("/self/device/powerAccepted")
+  val powerGrantedPath = "/self/device/powerGranted"
+  val powerAcceptedPath = "/self/device/powerAccepted"
   type AddDeviceFutureResponse = Either[Either[Throwable, HttpResponse], AddDeviceResponse]
   type AddSubscriptionFutureResponse = Either[Either[Throwable, HttpResponse], AddSubscriptionResponse]
   type GetPowerGrantedFutureResponse = Either[Either[Throwable, HttpResponse], GetPowerGrantedResponse]
@@ -31,8 +33,16 @@ object ClientDevice {
     override def postNotification(respond: NotificationResource.PostNotificationResponse.type)(body: Notification): Future[NotificationResource.PostNotificationResponse] = binding.get.postNotification(respond)(body)
   }
 
+  /**
+   * Container for the subscription IDs used by the client
+   *
+   * @param powerGranted  ID of powerGranted
+   * @param powerAccepted ID of powerAccepted
+   */
+  case class ClientSubscriptions(powerGranted: String, powerAccepted: String)
+
   def apply(clientURI: Uri, properties: DeviceProperties, serverURI: Uri)(implicit actorSystem: ActorSystem): Future[ClientDevice] = {
-    implicit val context: ExecutionContext = actorSystem.dispatcher
+    implicit val ec: ExecutionContext = actorSystem.dispatcher
     implicit val requester: HttpRequest => Future[HttpResponse] = Http().singleRequest(_)
     val reflector = new ClientNotificationReflector
     val deviceClient = DeviceClient(serverURI.toString())
@@ -43,10 +53,8 @@ object ClientDevice {
       serverBinding <- Http().newServerAt(clientURI.authority.host.toString(), clientURI.authority.port).bindFlow(routes)
       addResponse <- deviceClient.addDevice(properties).value
       deviceID <- mapAddResponse(addResponse) // The ID of the client on the GC
-      subscribeResponse <- subscribeToPowerGranted(clientURI, subscriptionClient, serverURI, deviceID)
-      powerGrantedSubscriptionID <- mapSubscriptionResponse(subscribeResponse)
-      powerGrantedResponse <- deviceClient.getPowerGranted(deviceID).value
-      initialPowerGranted <- mapPowerGrantedResponse(powerGrantedResponse)
+      powerGrantedID <- subscribeToPowerGranted(clientURI, subscriptionClient, serverURI, deviceID)
+      powerAcceptedID <- subscribeToPowerAccepted(clientURI, subscriptionClient, serverURI, deviceID)
     } yield new ClientDevice(
       clientURI,
       serverURI,
@@ -55,8 +63,7 @@ object ClientDevice {
       serverBinding,
       deviceClient,
       subscriptionClient,
-      powerGrantedSubscriptionID,
-      initialPowerGranted,
+      ClientSubscriptions(powerGrantedID, powerAcceptedID),
       deviceID)
 
   }
@@ -67,28 +74,24 @@ object ClientDevice {
     case other => throw new IllegalStateException(s"unexpected response: $other")
   }
 
-  private def subscribeToPowerGranted(observerURI: Uri, subscriptionClient: SubscriptionClient, gcURI: Uri, deviceID: String): Future[AddSubscriptionFutureResponse] = {
+  private def subscribeToPowerGranted(observerURI: Uri, subscriptionClient: SubscriptionClient, gcURI: Uri, deviceID: String)(implicit ec: ExecutionContext): Future[String] = {
     val subscriptionPath = Uri.Path(s"/devices/$deviceID/powerGranted")
     val observedURI = gcURI.withPath(subscriptionPath)
-    val observerURIWithPath = observerURI.withPath(ClientDevice.powerGrantedPath)
-    subscriptionClient.addSubscription(Subscription(observedURI.toString(), observerURIWithPath.toString())).value
+    val observerURIWithPath = observerURI.withPath(Uri.Path(ClientDevice.powerGrantedPath))
+    subscriptionClient.addSubscription(Subscription(observedURI.toString(), observerURIWithPath.toString())).value.flatMap {
+      case Right(AddSubscriptionResponse.Created(id)) => Future.successful(id)
+      case other => Future.failed(DeviceError.UnexpectedResponse(other.toString))
+    }
   }
 
-  private def mapSubscriptionResponse(response: AddSubscriptionFutureResponse): Future[String] = response match {
-    case Right(AddSubscriptionResponse.Created(id)) => Future.successful(id)
-    case Right(AddSubscriptionResponse.BadRequest(message)) => throw new IllegalStateException(s"bad request: $message")
-    case other => throw new IllegalStateException(s"unexpected response: $other")
-  }
-
-  /**
-   * Converts the response from a get power granted operation to the actual power granted value.
-   *
-   * @param response the response from the client operation
-   * @return the value wrapped in a [[Future]] or an error
-   */
-  private def mapPowerGrantedResponse(response: GetPowerGrantedFutureResponse): Future[BigDecimal] = response match {
-    case Right(OK(value)) => Future.successful(value)
-    case other => throw new IllegalStateException(s"unexpected response: $other")
+  private def subscribeToPowerAccepted(observerURI: Uri, subscriptionClient: SubscriptionClient, gcURI: Uri, deviceID: String)(implicit ec: ExecutionContext): Future[String] = {
+    val subscriptionPath = Uri.Path(s"/devices/$deviceID/powerAccepted")
+    val observedURI = gcURI.withPath(subscriptionPath)
+    val observerURIWithPath = observerURI.withPath(Uri.Path(ClientDevice.powerAcceptedPath))
+    subscriptionClient.addSubscription(Subscription(observedURI.toString(), observerURIWithPath.toString())).value.flatMap {
+      case Right(AddSubscriptionResponse.Created(id)) => Future.successful(id)
+      case other => Future.failed(DeviceError.UnexpectedResponse(other.toString))
+    }
   }
 }
 
@@ -100,12 +103,13 @@ class ClientDevice(
                     val serverBinding: Http.ServerBinding,
                     val deviceClient: DeviceClient,
                     val subscriptionClient: SubscriptionClient,
-                    val powerGrantedSubscriptionID: String,
-                    val initialPowerGranted: BigDecimal,
+                    val subscriptions: ClientSubscriptions,
                     val serverID: String)
                   (implicit actorSystem: ActorSystem) extends Device with NotificationHandler {
   implicit val context: ExecutionContext = actorSystem.dispatcher
-  private var powerGranted: BigDecimal = 0
+  private var powerGranted: PowerValue = 0
+  private var powerAccepted: PowerValue = 0
+
   reflector.bind(this)
 
   def terminate(): Future[Http.HttpTerminated] = for {
@@ -120,18 +124,16 @@ class ClientDevice(
   }
 
   override def postNotification(respond: NotificationResource.PostNotificationResponse.type)(body: Notification): Future[NotificationResource.PostNotificationResponse] = body match {
-    case Notification(_, _, value) => updatePowerGranted(respond, value)
+    case Notification(ClientDevice.powerGrantedPath, _, value)  => updatePowerGranted(respond, value)
+    case Notification(ClientDevice.powerAcceptedPath, _, value) => updatePowerAccepted(respond, value)
     case _ => throw new IllegalStateException(s"Unexpected notification: $body")
   }
 
   private def updatePowerGranted(respond: NotificationResource.PostNotificationResponse.type, valueAsString: String): Future[NotificationResource.PostNotificationResponse] = {
     //import io.circe.syntax._
-    import io.circe._
-    import io.circe.parser._
-
     parse(valueAsString) match {
       case Right(jsonValue) =>
-        jsonValue.as[BigDecimal] match {
+        jsonValue.as[PowerValue] match {
           case Right(value) => putPowerGranted(value) match {
             case Right(_) => Future.successful(respond.NoContent)
             case Left(error) => Future.successful(respond.BadRequest(error.getMessage))
@@ -142,9 +144,32 @@ class ClientDevice(
     }
   }
 
-  def putPowerGranted(value: BigDecimal): Either[DeviceError, Unit] = {
+  private def updatePowerAccepted(respond: NotificationResource.PostNotificationResponse.type, valueAsString: String): Future[NotificationResource.PostNotificationResponse] = {
+    //import io.circe.syntax._
+    parse(valueAsString) match {
+      case Right(jsonValue) =>
+        jsonValue.as[PowerValue] match {
+          case Right(value) => putPowerAccepted(value) match {
+            case Right(_) => Future.successful(respond.NoContent)
+            case Left(error) => Future.successful(respond.BadRequest(error.getMessage))
+          }
+          case Left(error) => Future.successful(respond.BadRequest(error.getMessage))
+        }
+      case Left(ParsingFailure(message, underlying)) => Future.successful(respond.BadRequest(s"Invalid JSON value: $underlying details: $message"))
+    }
+  }
+
+
+  private def putPowerGranted(value: PowerValue): Either[DeviceError, Unit] = {
     //println(s"device: $uri power granted: $value")
     this.powerGranted = value
     Right(())
   }
+
+  private def putPowerAccepted(value: PowerValue): Either[DeviceError, Unit] = {
+    //println(s"device: $uri power granted: $value")
+    this.powerAccepted = value
+    Right(())
+  }
+
 }

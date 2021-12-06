@@ -4,6 +4,8 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{HttpRequest, HttpResponse, Uri}
 import akka.http.scaladsl.server.Directives._
+import org.opendcgrid.app.polaris.client.definitions.{Device => DeviceProperties}
+import org.opendcgrid.app.polaris.client.device.DeviceClient
 import org.opendcgrid.app.polaris.server.device.DeviceResource
 import org.opendcgrid.app.polaris.server.gc.GcResource
 import org.opendcgrid.app.polaris.server.subscription.SubscriptionResource
@@ -12,20 +14,21 @@ import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
 
 object GCDevice {
-  def apply(uri: Uri, name: String)(implicit actorSystem: ActorSystem): Future[Device] = {
+  def apply(uri: Uri, properties: DeviceProperties)(implicit actorSystem: ActorSystem): Future[Device] = {
     implicit val context: ExecutionContext = actorSystem.dispatcher
     implicit val requester: HttpRequest => Future[HttpResponse] = Http().singleRequest(_)
+    val deviceClient = DeviceClient(uri.toString()) // Not used but needed for Device
     val subscriptionHandler = new GCSubscriptionHandler
     val subscriptionRoutes = SubscriptionResource.routes(subscriptionHandler)
     val deviceHandler = new GCDeviceHandler(uri, subscriptionHandler)
     val deviceRoutes = DeviceResource.routes(deviceHandler)
     val gcRoutes = GcResource.routes(new GCHandler(deviceHandler, subscriptionHandler))
     val routes = deviceRoutes ~ gcRoutes ~ subscriptionRoutes
-    Http().newServerAt(uri.authority.host.toString(), uri.authority.port).bindFlow(routes).map(binding => new GCDevice(binding))
+    Http().newServerAt(uri.authority.host.toString(), uri.authority.port).bindFlow(routes).map(binding => new GCDevice(properties, deviceClient, binding))
   }
 }
 
-class GCDevice(val serverBinding: Http.ServerBinding) extends Device {
+class GCDevice(val properties: DeviceProperties, val deviceClient: DeviceClient, val serverBinding: Http.ServerBinding) extends Device {
   override def terminate(): Future[Http.HttpTerminated] = serverBinding.terminate(FiniteDuration(1, "seconds"))
 }
 /*
