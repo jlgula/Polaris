@@ -4,6 +4,7 @@ import akka.http.scaladsl.model.Uri
 import org.opendcgrid.app.polaris.PolarisTestUtilities
 import org.opendcgrid.app.polaris.command.CommandTestUtilities.TestCommandContext
 import org.opendcgrid.app.polaris.device.DeviceDescriptor
+import org.opendcgrid.app.polaris.client.definitions.{Device => DeviceProperties}
 
 import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration.Duration
@@ -32,14 +33,16 @@ class DevicesCommandTest extends org.scalatest.funsuite.AnyFunSuite {
     val manager = context.deviceManager
     val uri1 = Uri("http://localhost").withPort(PolarisTestUtilities.getUnusedPort)
     val uri2 = Uri("http://localhost").withPort(PolarisTestUtilities.getUnusedPort)
+    val properties1 = DeviceProperties("1", "Device1")
+    val properties2 = DeviceProperties("2", "Device2")
     val result = for {
-      _ <- manager.startDevice(DeviceDescriptor.GC, None, uri1)
-      _ <- manager.startDevice(DeviceDescriptor.GC, None, uri2)
+      _ <- manager.startDevice(DeviceDescriptor.GC, properties1, uri1)
+      _ <- manager.startDevice(DeviceDescriptor.Client, properties2, uri2, Some(uri1))
     } yield ()
     Await.result(result, Duration.Inf)
     val listResult = DevicesCommand.run(context)
-    val expected1 = CommandResponse.DeviceResponse(DeviceDescriptor.GC.name, DeviceDescriptor.GC, uri1)
-    val expected2 = CommandResponse.DeviceResponse(DeviceDescriptor.GC.name + "1", DeviceDescriptor.GC, uri2)
+    val expected1 = CommandResponse.DeviceResponse(properties1.name, DeviceDescriptor.GC, uri1)
+    val expected2 = CommandResponse.DeviceResponse(properties2.name, DeviceDescriptor.Client, uri2)
     assertResult(Success(CommandResponse.MultiResponse(Seq(expected1, expected2))))(listResult)
     Await.result(manager.terminateAll(), Duration.Inf)
     val listResult2 = manager.listTasks.toSeq

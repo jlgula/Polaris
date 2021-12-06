@@ -3,7 +3,7 @@ package org.opendcgrid.app.polaris.device
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{HttpRequest, HttpResponse, Uri}
-import org.opendcgrid.app.polaris.client.definitions.{Notification, Subscription, Device => DefinedDevice}
+import org.opendcgrid.app.polaris.client.definitions.{Notification, Subscription, Device => DeviceProperties}
 import org.opendcgrid.app.polaris.client.device.AddDeviceResponse.{BadRequest, Created}
 import org.opendcgrid.app.polaris.client.device.{AddDeviceResponse, DeleteDeviceResponse, DeviceClient, GetPowerGrantedResponse, ListDevicesResponse, PutPowerAcceptedResponse, PutPowerGrantedResponse}
 import org.opendcgrid.app.polaris.client.notification.NotificationHandler
@@ -11,7 +11,6 @@ import org.opendcgrid.app.polaris.client.subscription.{AddSubscriptionResponse, 
 import org.opendcgrid.app.polaris.command.CommandError
 import org.opendcgrid.app.polaris.device.CapacityManagerDevice.{DeviceSubscription, PowerManagerNotificationReflector, devicesPath}
 
-import java.util.UUID
 import scala.concurrent.duration.FiniteDuration
 import org.opendcgrid.app.polaris.client.notification.NotificationResource
 
@@ -37,32 +36,30 @@ object CapacityManagerDevice {
 
   case class DeviceSubscription(deviceID: String, subscriptionID: String)
 
-  def apply(deviceURI: Uri, name: String, serverURI: Uri)(implicit actorSystem: ActorSystem): Future[CapacityManagerDevice] = {
-    new DeviceBuilder(deviceURI, name, serverURI).build()
+  def apply(deviceURI: Uri, properties: DeviceProperties, serverURI: Uri)(implicit actorSystem: ActorSystem): Future[CapacityManagerDevice] = {
+    new DeviceBuilder(deviceURI, properties, serverURI).build()
   }
 
-  class DeviceBuilder(val deviceURI: Uri, val name: String, val serverURI: Uri)(implicit actorSystem: ActorSystem) {
+  class DeviceBuilder(val deviceURI: Uri, properties: DeviceProperties, val serverURI: Uri)(implicit actorSystem: ActorSystem) {
     implicit val context: ExecutionContext = actorSystem.dispatcher
     implicit val requester: HttpRequest => Future[HttpResponse] = Http().singleRequest(_)
-    private val id = UUID.randomUUID().toString
     private val reflector = new PowerManagerNotificationReflector
     private val deviceClient = DeviceClient(serverURI.toString())
     private val subscriptionClient = SubscriptionClient(serverURI.toString())
-    private val deviceProperties = DefinedDevice(id, name)
     private val notificationRoutes = NotificationResource.routes(reflector)
     private val routes = notificationRoutes // ~ gcRoutes ~ subscriptionRoutes
 
     def build(): Future[CapacityManagerDevice] = {
       for {
         serverBinding <- Http().newServerAt(deviceURI.authority.host.toString(), deviceURI.authority.port).bindFlow(routes)
-        deviceID <- addDevice(deviceClient, deviceProperties)
+        deviceID <- addDevice(deviceClient, properties)
         tableSubscription <- subscribe(Uri.Path("/v1/devices"), Uri.Path("/v1/devices"))
         devices <- listDevices()
         deviceSubscriptions <- subscribeToDevices(devices.map(_.id))
       } yield new CapacityManagerDevice(
         deviceURI,
         serverURI,
-        deviceProperties,
+        properties,
         reflector,
         serverBinding,
         deviceClient,
@@ -72,7 +69,7 @@ object CapacityManagerDevice {
         deviceID)
     }
 
-    private def addDevice(deviceClient: DeviceClient, properties: DefinedDevice): Future[String] = {
+    private def addDevice(deviceClient: DeviceClient, properties: DeviceProperties): Future[String] = {
       for {
         addResponse <- deviceClient.addDevice(properties).value
         deviceID <- mapAddResponse(addResponse) // The ID of the client on the GC
@@ -85,7 +82,7 @@ object CapacityManagerDevice {
       case other => throw new IllegalStateException(s"unexpected response: $other")
     }
 
-    private def listDevices(): Future[Seq[DefinedDevice]] = deviceClient.listDevices().value.flatMap {
+    private def listDevices(): Future[Seq[DeviceProperties]] = deviceClient.listDevices().value.flatMap {
       case Right(ListDevicesResponse.OK(value)) => Future.successful(value)
       case other => Future.failed(CommandError.UnexpectedResponse(other.toString))
     }
@@ -120,7 +117,7 @@ object CapacityManagerDevice {
 class CapacityManagerDevice(
                     val uri: Uri,
                     val serverURI: Uri,
-                    val properties: DefinedDevice,
+                    val properties: DeviceProperties,
                     val reflector: PowerManagerNotificationReflector,
                     val serverBinding: Http.ServerBinding,
                     val deviceClient: DeviceClient,
@@ -196,12 +193,12 @@ class CapacityManagerDevice(
     } yield respond.NoContent
   }
 
-  private def parseDevice(value: String): Future[DefinedDevice] = {
+  private def parseDevice(value: String): Future[DeviceProperties] = {
     import io.circe._
     import io.circe.parser._
     parse(value) match {
       case Right(jsonValue) =>
-        jsonValue.as[DefinedDevice] match {
+        jsonValue.as[DeviceProperties] match {
           case Right(device) => Future.successful(device)
           case Left(error) => Future.failed(CommandError.UnexpectedResponse(error.toString()))
         }

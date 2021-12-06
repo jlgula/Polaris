@@ -3,15 +3,13 @@ package org.opendcgrid.app.polaris.device
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{HttpRequest, HttpResponse, Uri}
-import org.opendcgrid.app.polaris.client.definitions.{Notification, Subscription, Device => DefinedDevice}
+import org.opendcgrid.app.polaris.client.definitions.{Notification, Subscription, Device => DeviceProperties}
 import org.opendcgrid.app.polaris.client.device.AddDeviceResponse._
 import org.opendcgrid.app.polaris.client.device.GetPowerGrantedResponse.OK
 import org.opendcgrid.app.polaris.client.device.{AddDeviceResponse, DeleteDeviceResponse, DeviceClient, GetPowerGrantedResponse}
 import org.opendcgrid.app.polaris.client.notification.NotificationHandler
 import org.opendcgrid.app.polaris.client.subscription.{AddSubscriptionResponse, SubscriptionClient}
 import org.opendcgrid.app.polaris.device.ClientDevice.ClientNotificationReflector
-
-import java.util.UUID
 import scala.concurrent.duration.FiniteDuration
 //import akka.http.scaladsl.server.Directives._
 import org.opendcgrid.app.polaris.client.notification.NotificationResource
@@ -33,19 +31,17 @@ object ClientDevice {
     override def postNotification(respond: NotificationResource.PostNotificationResponse.type)(body: Notification): Future[NotificationResource.PostNotificationResponse] = binding.get.postNotification(respond)(body)
   }
 
-  def apply(clientURI: Uri, name: String, serverURI: Uri)(implicit actorSystem: ActorSystem): Future[ClientDevice] = {
+  def apply(clientURI: Uri, properties: DeviceProperties, serverURI: Uri)(implicit actorSystem: ActorSystem): Future[ClientDevice] = {
     implicit val context: ExecutionContext = actorSystem.dispatcher
     implicit val requester: HttpRequest => Future[HttpResponse] = Http().singleRequest(_)
-    val id = UUID.randomUUID().toString
     val reflector = new ClientNotificationReflector
     val deviceClient = DeviceClient(serverURI.toString())
     val subscriptionClient = SubscriptionClient(serverURI.toString())
-    val deviceProperties = DefinedDevice(id, name)
     val notificationRoutes = NotificationResource.routes(reflector)
     val routes = notificationRoutes // ~ gcRoutes ~ subscriptionRoutes
     for {
       serverBinding <- Http().newServerAt(clientURI.authority.host.toString(), clientURI.authority.port).bindFlow(routes)
-      addResponse <- deviceClient.addDevice(deviceProperties).value
+      addResponse <- deviceClient.addDevice(properties).value
       deviceID <- mapAddResponse(addResponse) // The ID of the client on the GC
       subscribeResponse <- subscribeToPowerGranted(clientURI, subscriptionClient, serverURI, deviceID)
       powerGrantedSubscriptionID <- mapSubscriptionResponse(subscribeResponse)
@@ -54,7 +50,7 @@ object ClientDevice {
     } yield new ClientDevice(
       clientURI,
       serverURI,
-      deviceProperties,
+      properties,
       reflector,
       serverBinding,
       deviceClient,
@@ -99,7 +95,7 @@ object ClientDevice {
 class ClientDevice(
                     val uri: Uri,
                     val serverURI: Uri,
-                    val properties: DefinedDevice,
+                    val properties: DeviceProperties,
                     val reflector: ClientNotificationReflector,
                     val serverBinding: Http.ServerBinding,
                     val deviceClient: DeviceClient,

@@ -4,6 +4,7 @@ sealed abstract class DeviceDescriptor(val name: String)
 object DeviceDescriptor {
   object GC extends DeviceDescriptor("gc")
   object Client extends DeviceDescriptor("client")
+  object CapacityManager extends DeviceDescriptor("capacityManager")
 
   val all: Seq[DeviceDescriptor] = Seq(GC, Client)
   def find(name: String): Option[DeviceDescriptor] = all.find(_.name == name)

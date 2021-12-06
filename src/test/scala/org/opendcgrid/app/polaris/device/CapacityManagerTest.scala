@@ -1,14 +1,14 @@
 package org.opendcgrid.app.polaris.device
-import org.opendcgrid.app.polaris.client.definitions.{Device => DefinedDevice}
+import org.opendcgrid.app.polaris.client.definitions.{Device => DeviceProperties}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{Await, Future}
 import scala.concurrent.duration.Duration
 
 class CapacityManagerTest extends org.scalatest.funsuite.AnyFunSuite {
-  private val device1 = DefinedDevice("1", "device1")
-  private val device2 = DefinedDevice("2", "device2")
-  private val device3 = DefinedDevice("3", "device3")
+  private val device1 = DeviceProperties("1", "device1")
+  private val device2 = DeviceProperties("2", "device2")
+  private val device3 = DeviceProperties("3", "device3")
 
   val futureMethod: (DeviceID, PowerValue) => Future[Unit] = (_, _)=> Future.successful(())
   test("addDevice") {

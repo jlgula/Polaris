@@ -1,6 +1,6 @@
 package org.opendcgrid.app.polaris.device
 
-import org.opendcgrid.app.polaris.client.definitions.{Device => DefinedDevice}
+import org.opendcgrid.app.polaris.client.definitions.{Device => DeviceProperties}
 
 import scala.annotation.tailrec
 import scala.collection.mutable
@@ -11,11 +11,11 @@ case class PowerAssignment(id: DeviceID, powerGranted: PowerValue = PowerValue(0
 class CapacityManager(
                            sendGrant: (DeviceID, PowerValue) => Future[Unit],
                            sendAccept: (DeviceID, PowerValue) => Future[Unit])(implicit ec: ExecutionContext) {
-  private val deviceMap = mutable.Map[DeviceID, DefinedDevice]()
+  private val deviceMap = mutable.Map[DeviceID, DeviceProperties]()
   private val currentAssignments = mutable.Map[DeviceID, PowerAssignment]()
   case class Assignment(id: DeviceID, power: PowerValue)
 
-  def addDevice(device: DefinedDevice): Future[Seq[PowerAssignment]] = {
+  def addDevice(device: DeviceProperties): Future[Seq[PowerAssignment]] = {
     deviceMap.put(device.id, device)
     currentAssignments.put(device.id, PowerAssignment(device.id))
     AssignPower()
@@ -27,7 +27,7 @@ class CapacityManager(
     AssignPower()
   }
 
-  def updateDevice(device: DefinedDevice): Future[Seq[PowerAssignment]] = {
+  def updateDevice(device: DeviceProperties): Future[Seq[PowerAssignment]] = {
     deviceMap.put(device.id, device)
     AssignPower()
   }

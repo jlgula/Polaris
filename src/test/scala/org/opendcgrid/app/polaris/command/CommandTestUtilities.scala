@@ -5,6 +5,7 @@ import akka.http.scaladsl.model.Uri
 import org.opendcgrid.app.polaris.{PolarisTestFixture, PolarisTestUtilities}
 import org.opendcgrid.app.polaris.device.DeviceManager
 import org.opendcgrid.app.polaris.shell.{Shell, ShellConfiguration}
+//import org.opendcgrid.app.polaris.client.definitions.{Device => DeviceProperties}
 
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContextExecutor, Future}

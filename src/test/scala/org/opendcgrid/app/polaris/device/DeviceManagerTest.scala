@@ -4,6 +4,8 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.model.Uri
 import org.opendcgrid.app.polaris.PolarisTestUtilities
 import org.opendcgrid.app.polaris.command.CommandTestUtilities.TestCommandContext
+import org.opendcgrid.app.polaris.client.definitions.{Device => DeviceProperties}
+
 
 import java.util.concurrent.Semaphore
 import scala.concurrent.duration.Duration
@@ -24,16 +26,18 @@ class DeviceManagerTest extends org.scalatest.funsuite.AnyFunSuite {
     implicit val ec: ExecutionContextExecutor = context.executionContext
     val manager = context.deviceManager
     val uri1 = Uri("http://localhost").withPort(PolarisTestUtilities.getUnusedPort)
+    val properties1 = DeviceProperties("ID1", "name1")
     val result = for {
-      binding <- manager.startDevice(DeviceDescriptor.GC, None, uri1)
+      binding <- manager.startDevice(DeviceDescriptor.GC, properties1, uri1)
       termination <- manager.terminateDevice(binding.name)
     } yield termination
     Try(Await.result(result, Duration.Inf)) match {
       case Success(_) => // pass
       case other => fail(s"unexpected result: $other")
     }
+    val properties2 = DeviceProperties("ID2", "name2")
     val result2 = for {
-      binding <- manager.startDevice(DeviceDescriptor.GC, None, uri1)
+      binding <- manager.startDevice(DeviceDescriptor.GC, properties2, uri1)
       termination <- manager.terminateDevice(binding.name)
     } yield termination
     Try(Await.result(result2, Duration.Inf)) match {
@@ -43,25 +47,25 @@ class DeviceManagerTest extends org.scalatest.funsuite.AnyFunSuite {
   }
 
   test("list tasks then terminate all") {
-      val context = new TestCommandContext()
-      implicit val ec: ExecutionContextExecutor = context.executionContext
-      val manager = context.deviceManager
-      val name1 = "name1"
-      val uri1 = Uri("http://localhost").withPort(PolarisTestUtilities.getUnusedPort)
-      val name2 = "name2"
-      val uri2 = Uri("http://localhost").withPort(PolarisTestUtilities.getUnusedPort)
-      val result = for {
-        _ <- manager.startDevice(DeviceDescriptor.GC, Some(name1), uri1)
-        _ <- manager.startDevice(DeviceDescriptor.GC, Some(name2), uri2)
-      } yield ()
-      Await.result(result, Duration.Inf)
-      val listResult = manager.listTasks.toSeq
-      val expected1 = (name1, DeviceDescriptor.GC, uri1)
-      val expected2 = (name2, DeviceDescriptor.GC, uri2)
-      assertResult(Seq(expected1, expected2))(listResult)
-      Await.result(manager.terminateAll(), Duration.Inf)
-      val listResult2 = manager.listTasks.toSeq
-      assert(listResult2.isEmpty)
+    val context = new TestCommandContext()
+    implicit val ec: ExecutionContextExecutor = context.executionContext
+    val manager = context.deviceManager
+    val properties1 = DeviceProperties("ID1", "name1")
+    val uri1 = Uri("http://localhost").withPort(PolarisTestUtilities.getUnusedPort)
+    val properties2 = DeviceProperties("ID2", "name2")
+    val uri2 = Uri("http://localhost").withPort(PolarisTestUtilities.getUnusedPort)
+    val result = for {
+      _ <- manager.startDevice(DeviceDescriptor.GC, properties1, uri1)
+      _ <- manager.startDevice(DeviceDescriptor.GC, properties2, uri2)
+    } yield ()
+    Await.result(result, Duration.Inf)
+    val listResult = manager.listTasks.toSeq
+    val expected1 = (properties1.name, DeviceDescriptor.GC, uri1)
+    val expected2 = (properties2.name, DeviceDescriptor.GC, uri2)
+    assertResult(Seq(expected1, expected2))(listResult)
+    Await.result(manager.terminateAll(), Duration.Inf)
+    val listResult2 = manager.listTasks.toSeq
+    assert(listResult2.isEmpty)
   }
 
 

@@ -3,20 +3,20 @@ package org.opendcgrid.app.polaris.command
 import akka.actor.ActorSystem
 import akka.http.scaladsl.model.Uri
 import org.opendcgrid.app.polaris.PolarisAppOptionTag
-import org.opendcgrid.app.polaris.client.definitions.{Device => DeviceProperties}
 import org.opendcgrid.app.polaris.command.Command.parseErrors
 import org.opendcgrid.app.polaris.command.CommandUtilities.parsePort
 import org.opendcgrid.app.polaris.device.{DeviceDescriptor, DeviceError}
 import org.opendcgrid.lib.commandoption.CommandOptionResult
+import org.opendcgrid.app.polaris.client.definitions.{Device => DeviceProperties}
 
 import java.net.BindException
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, ExecutionContext, TimeoutException}
 import scala.util.{Failure, Success, Try}
 
-case object ClientCommand extends Parsable {
-  val name = "client"
-  val help = "client - start a client device"
+case object CapacityManagerCommand extends Parsable {
+  val name = "capacityManager"
+  val help = "capacityManager - start a capacity manager"
   val defaultPort: Int = 0
 
 
@@ -26,22 +26,22 @@ case object ClientCommand extends Parsable {
     for {
       _ <- parseErrors(result) // Bail out if any errors in find
       port <- parsePort(result, defaultPort)
-    } yield ClientCommand(port)
+    } yield CapacityManagerCommand(port)
   }
 }
 
-case class ClientCommand(port: Int = 0) extends Command {
+case class CapacityManagerCommand(port: Int = 0) extends Command {
   val uri: Uri = Uri("http://localhost").withPort(port)
   def run(context: CommandContext): Try[CommandResponse.DeviceResponse] = {
     implicit def actorSystem: ActorSystem = context.actorSystem
     implicit def ec: ExecutionContext = actorSystem.dispatcher
-    val descriptor = DeviceDescriptor.Client
-    val id = context.deviceManager.selectID()
+    val descriptor = DeviceDescriptor.CapacityManager
     val name = context.deviceManager.selectName(descriptor)
+    val id = context.deviceManager.selectID()
     val properties = DeviceProperties(id, name)
     val binding = for {
       controllerURI <- context.locateController
-      binding <- context.deviceManager.startDevice(DeviceDescriptor.Client, properties, uri, Some(controllerURI))
+      binding <- context.deviceManager.startDevice(descriptor, properties, uri, Some(controllerURI))
     } yield binding
     Try(Await.ready(binding, Duration.Inf)) match {
       case Success(f) => f.value.get match {
@@ -55,7 +55,7 @@ case class ClientCommand(port: Int = 0) extends Command {
           println(error)
           throw new IllegalStateException(s"unexpected server error: $error")
       }
-      case Failure(_) => Failure(CommandError.ServerError(DeviceError.Timeout))
+      case Failure(error) => throw new IllegalStateException(s"unexpected error: $error")
     }
   }
 }
