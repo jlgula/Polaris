@@ -12,7 +12,7 @@ class CapacityManagerTest extends org.scalatest.funsuite.AnyFunSuite {
 
   val futureMethod: (DeviceID, PowerValue) => Future[Unit] = (_, _)=> Future.successful(())
   test("addDevice") {
-    val sample = new CapacityManager(futureMethod, futureMethod)
+    val sample = new CapacityManager(Nil, futureMethod, futureMethod)
     val result = Await.result(sample.addDevice(device1), Duration.Inf)
     assertResult(Nil)(result)
   }
@@ -85,7 +85,7 @@ class CapacityManagerTest extends org.scalatest.funsuite.AnyFunSuite {
       Future.successful(())
     }
 
-    val sample = new CapacityManager(grantMethod, acceptMethod)
+    val sample = new CapacityManager(Nil, grantMethod, acceptMethod)
     Await.result(sample.addDevice(device1), Duration.Inf)
     assertResult(defaultAssignment)(grantAssignment)
     assertResult(defaultAssignment)(acceptAssignment)
@@ -105,7 +105,7 @@ class CapacityManagerTest extends org.scalatest.funsuite.AnyFunSuite {
   }
 
   def createSample(): CapacityManager = {
-    val sample = new CapacityManager(futureMethod, futureMethod)
+    val sample = new CapacityManager(Nil, futureMethod, futureMethod)
     val devices = Seq(device1, device2, device3)
     devices.foreach { device =>
       Await.result(sample.addDevice(device), Duration.Inf)

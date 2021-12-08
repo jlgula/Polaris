@@ -14,6 +14,8 @@ import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.{ExecutionContext, Future}
 
 object GCDevice {
+  val devicesPath = "/v1/devices"
+
   def apply(uri: Uri, properties: DeviceProperties)(implicit actorSystem: ActorSystem): Future[Device] = {
     implicit val context: ExecutionContext = actorSystem.dispatcher
     implicit val requester: HttpRequest => Future[HttpResponse] = Http().singleRequest(_)

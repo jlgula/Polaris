@@ -28,7 +28,7 @@ class DeviceManager(implicit actorSystem: ActorSystem) {
     descriptor match {
       case GC => GCDevice(deviceURI, properties).map(device => Binding(properties.name, descriptor, deviceURI, device)).map(bt => addBinding(bt))
       case Client => ClientDevice(deviceURI, properties, controllerURI.get).map(device => Binding(properties.name, descriptor, deviceURI, device)).map(bt => addBinding(bt))
-      case CapacityManager => ClientDevice(deviceURI, properties, controllerURI.get).map(device => Binding(properties.name, descriptor, deviceURI, device)).map(bt => addBinding(bt))
+      case CapacityManager => CapacityManagerDevice(deviceURI, properties, controllerURI.get).map(device => Binding(properties.name, descriptor, deviceURI, device)).map(bt => addBinding(bt))
     }
   }
 

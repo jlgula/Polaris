@@ -8,28 +8,28 @@ import scala.concurrent.{ExecutionContext, Future}
 
 case class PowerAssignment(id: DeviceID, powerGranted: PowerValue = PowerValue(0), powerAccepted: PowerValue = PowerValue(0))
 
-class CapacityManager(
+class CapacityManager(devices: Seq[DeviceProperties],
                            sendGrant: (DeviceID, PowerValue) => Future[Unit],
                            sendAccept: (DeviceID, PowerValue) => Future[Unit])(implicit ec: ExecutionContext) {
-  private val deviceMap = mutable.Map[DeviceID, DeviceProperties]()
-  private val currentAssignments = mutable.Map[DeviceID, PowerAssignment]()
+  private val deviceMap = mutable.Map[DeviceID, DeviceProperties](devices.map(device => (device.id, device)):_*)
+  private val currentAssignments = mutable.Map[DeviceID, PowerAssignment](devices.map(device => (device.id, PowerAssignment(device.id))):_*)
   case class Assignment(id: DeviceID, power: PowerValue)
 
   def addDevice(device: DeviceProperties): Future[Seq[PowerAssignment]] = {
     deviceMap.put(device.id, device)
     currentAssignments.put(device.id, PowerAssignment(device.id))
-    AssignPower()
+    assignPower()
   }
 
   def removeDevice(id: DeviceID): Future[Seq[PowerAssignment]] = {
     deviceMap.remove(id)
     currentAssignments.remove(id)
-    AssignPower()
+    assignPower()
   }
 
   def updateDevice(device: DeviceProperties): Future[Seq[PowerAssignment]] = {
     deviceMap.put(device.id, device)
-    AssignPower()
+    assignPower()
   }
 
   def getPowerAssignment(id: String): PowerAssignment = currentAssignments(id)
@@ -42,8 +42,8 @@ class CapacityManager(
    *
    * @return  a sequence of all devices that had power assignments wrapped in a Future
    */
-  def AssignPower(): Future[Seq[PowerAssignment]] = {
-
+  def assignPower(): Future[Seq[PowerAssignment]] = {
+    //println(s"assign power: ${currentAssignments.values}")
     val powerValues =  deviceMap.values.map(device => (device.powerRequested.getOrElse(PowerValue(0)), device.powerOffered.getOrElse(PowerValue(0))))
 
     val powerRequested = powerValues.map(_._1).sum  // Compute total of power requested.

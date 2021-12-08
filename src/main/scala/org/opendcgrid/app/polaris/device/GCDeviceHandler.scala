@@ -1,10 +1,11 @@
 package org.opendcgrid.app.polaris.device
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.model.Uri
+import akka.http.scaladsl.model.{HttpResponse, Uri}
 import io.circe.syntax._
 import org.opendcgrid.app.polaris.server.definitions.{Device, Notification}
 import org.opendcgrid.app.polaris.server.device.{DeviceHandler, DeviceResource}
+import org.opendcgrid.app.polaris.server.notification.PostNotificationResponse
 import org.opendcgrid.app.polaris.{PolarisError, PolarisHandler}
 
 import scala.collection.mutable
@@ -24,8 +25,18 @@ class GCDeviceHandler(val uri: Uri, val subscriptionHandler: GCSubscriptionHandl
     } else {
       //system.log.info("device added: {}", body.toString)
       devices.put(body.id, body)
-      val notificationsFuture = subscriptionHandler.notify(Notification("v1/devices", NotificationAction.Post.value, body.asJson.toString()))
-      notificationsFuture.map(_ => respond.Created(body.id))
+      val notificationsFuture = subscriptionHandler.notify(Notification(uri.withPath(Uri.Path(GCDevice.devicesPath)).toString(), NotificationAction.Post.value, body.asJson.toString()))
+      notificationsFuture.map{ responses =>
+        validateResponses(responses)
+        respond.Created(body.id)
+      }
+    }
+  }
+
+  private def validateResponses(responses: Iterable[Either[Either[Throwable, HttpResponse], PostNotificationResponse]]): Unit = {
+    responses.foreach {
+      case Right(PostNotificationResponse.NoContent) => // Succeed
+      case other => throw new IllegalStateException(s"Unexpected response: $other") // TODO: fix to normal error - log?
     }
   }
 

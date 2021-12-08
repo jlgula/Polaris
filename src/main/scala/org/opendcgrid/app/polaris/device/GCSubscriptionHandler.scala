@@ -1,7 +1,7 @@
 package org.opendcgrid.app.polaris.device
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.model.{HttpRequest, HttpResponse}
+import akka.http.scaladsl.model.{HttpRequest, HttpResponse, Uri}
 import org.opendcgrid.app.polaris.server.notification.PostNotificationResponse
 import org.opendcgrid.app.polaris.server.subscription.{SubscriptionHandler, SubscriptionResource}
 //import org.opendcgrid.app.polaris.client.definitions.Notification
@@ -40,7 +40,8 @@ class GCSubscriptionHandler(implicit system: ActorSystem, requester: HttpRequest
     val id = UUID.randomUUID().toString
     subscriptions.put(id, body)
     if (!clients.contains(body.observerUrl)) {
-      clients.put(body.observerUrl, NotificationClient(body.observerUrl))
+      // clients contains just the host of the client, not the path
+      clients.put(body.observerUrl, NotificationClient(Uri(body.observerUrl).withPath(Uri.Path.Empty).toString()))
     }
     Future.successful(respond.Created(id))
   }

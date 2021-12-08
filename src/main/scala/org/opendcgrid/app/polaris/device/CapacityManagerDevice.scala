@@ -9,18 +9,19 @@ import org.opendcgrid.app.polaris.client.device.{AddDeviceResponse, DeleteDevice
 import org.opendcgrid.app.polaris.client.notification.NotificationHandler
 import org.opendcgrid.app.polaris.client.subscription.{AddSubscriptionResponse, SubscriptionClient}
 import org.opendcgrid.app.polaris.command.CommandError
-import org.opendcgrid.app.polaris.device.CapacityManagerDevice.{DeviceSubscription, PowerManagerNotificationReflector, devicesPath}
+import org.opendcgrid.app.polaris.device.CapacityManagerDevice.{DeviceBuilder, DeviceSubscription, PowerManagerNotificationReflector}
 
 import scala.concurrent.duration.FiniteDuration
 import org.opendcgrid.app.polaris.client.notification.NotificationResource
 
+import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success, Try}
 object CapacityManagerDevice {
   val powerGrantedPath: Uri.Path = Uri.Path("/self/device/powerGranted")
   val powerAcceptedPath: Uri.Path = Uri.Path("/self/device/powerAccepted")
   val deviceAddedPath: Uri.Path = Uri.Path("/self/devices/deviceAdded")
   val deviceRemovedPath: Uri.Path = Uri.Path("/self/devices/deviceRemoved")
-  val devicesPath = "/v1/devices"   // Controller path for devices
   type AddDeviceFutureResponse = Either[Either[Throwable, HttpResponse], AddDeviceResponse]
   type AddSubscriptionFutureResponse = Either[Either[Throwable, HttpResponse], AddSubscriptionResponse]
   type GetPowerGrantedFutureResponse = Either[Either[Throwable, HttpResponse], GetPowerGrantedResponse]
@@ -34,7 +35,7 @@ object CapacityManagerDevice {
     override def postNotification(respond: NotificationResource.PostNotificationResponse.type)(body: Notification): Future[NotificationResource.PostNotificationResponse] = binding.get.postNotification(respond)(body)
   }
 
-  case class DeviceSubscription(deviceID: String, subscriptionID: String)
+  case class DeviceSubscription(device: DeviceProperties, subscriptionID: String)
 
   def apply(deviceURI: Uri, properties: DeviceProperties, serverURI: Uri)(implicit actorSystem: ActorSystem): Future[CapacityManagerDevice] = {
     new DeviceBuilder(deviceURI, properties, serverURI).build()
@@ -52,21 +53,24 @@ object CapacityManagerDevice {
     def build(): Future[CapacityManagerDevice] = {
       for {
         serverBinding <- Http().newServerAt(deviceURI.authority.host.toString(), deviceURI.authority.port).bindFlow(routes)
+        devices <- listDevices()  // List before we add the CapacityManager so we don't pick that up too.
         deviceID <- addDevice(deviceClient, properties)
-        tableSubscription <- subscribe(Uri.Path("/v1/devices"), Uri.Path("/v1/devices"))
-        devices <- listDevices()
-        deviceSubscriptions <- subscribeToDevices(devices.map(_.id))
-      } yield new CapacityManagerDevice(
-        deviceURI,
-        serverURI,
-        properties,
-        reflector,
-        serverBinding,
-        deviceClient,
-        subscriptionClient,
-        deviceSubscriptions,
-        tableSubscription,
-        deviceID)
+        tableSubscription <- subscribe(Uri.Path(GCDevice.devicesPath), Uri.Path(GCDevice.devicesPath))
+        deviceSubscriptions <- subscribeToDevices(devices)
+        cmDevice = new CapacityManagerDevice(
+          deviceURI,
+          serverURI,
+          properties,
+          reflector,
+          serverBinding,
+          deviceClient,
+          subscriptionClient,
+          deviceSubscriptions,
+          tableSubscription,
+          this,
+          deviceID)
+        _ <- cmDevice.assignPower()
+      } yield cmDevice
     }
 
     private def addDevice(deviceClient: DeviceClient, properties: DeviceProperties): Future[String] = {
@@ -97,18 +101,18 @@ object CapacityManagerDevice {
       }
     }
 
-    private def subscribeToDevices(deviceIDs: Seq[DeviceID]): Future[Seq[DeviceSubscription]] = {
+    private def subscribeToDevices(devices: Seq[DeviceProperties]): Future[Seq[DeviceSubscription]] = {
       for {
-        subscriptions <- Future.sequence(deviceIDs.map(subscribeToDevice))
-      } yield deviceIDs.zip(subscriptions).map{ case (deviceID, subscriptionID) => DeviceSubscription(deviceID, subscriptionID)}
+        subscriptions <- Future.sequence(devices.map(subscribeToDevice))
+      } yield subscriptions
     }
 
     // Subscribe to the value of a device containing PowerRequested and PowerOffered.
     // This will update the power distribution if these change for any device.
     // The subscription is also watching deletes in case the device goes away.
-    private def subscribeToDevice(deviceID: String): Future[String] = {
-      val path = Uri.Path(s"/devices/$deviceID")
-      subscribe(path, path)
+    def subscribeToDevice(device: DeviceProperties): Future[DeviceSubscription] = {
+      val path = Uri.Path(s"${GCDevice.devicesPath}/${device.id}")
+      subscribe(path, path).map(subscriptionID => DeviceSubscription(device, subscriptionID))
     }
   }
 }
@@ -122,13 +126,16 @@ class CapacityManagerDevice(
                     val serverBinding: Http.ServerBinding,
                     val deviceClient: DeviceClient,
                     val subscriptionClient: SubscriptionClient,
-                    val devices: Seq[DeviceSubscription],
+                    val initialSubscriptions: Seq[DeviceSubscription],
                     val tableSubscription: String,
+                    val deviceBuilder: DeviceBuilder,
                     val serverID: String)
                            (implicit actorSystem: ActorSystem) extends Device with NotificationHandler {
   implicit val context: ExecutionContext = actorSystem.dispatcher
-  val manager = new CapacityManager(grantMethod, acceptMethod)
+  private val manager = new CapacityManager(initialSubscriptions.map(_.device), grantMethod, acceptMethod)
+  private val deviceSubscriptions = mutable.Map[DeviceID, DeviceSubscription](initialSubscriptions.map(subscription => (subscription.device.id, subscription)): _*)
   reflector.bind(this)
+
 
   private def grantMethod(id: DeviceID, value: PowerValue): Future[Unit] = {
     deviceClient.putPowerGranted(id, value).value.map {
@@ -152,7 +159,7 @@ class CapacityManagerDevice(
    *
    * @return  a sequence of all devices that had power assignments wrapped in a Future
    */
-  def assignPower(): Future[Seq[PowerAssignment]] = manager.AssignPower()
+  def assignPower(): Future[Seq[PowerAssignment]] = manager.assignPower()
 
   def terminate(): Future[Http.HttpTerminated] = for {  // TODO: stop subscriptions?
     deleteResponse <- deviceClient.deleteDevice(serverID).value
@@ -166,17 +173,30 @@ class CapacityManagerDevice(
   }
 
   override def postNotification(respond: NotificationResource.PostNotificationResponse.type)(body: Notification): Future[NotificationResource.PostNotificationResponse] = body match {
-    case Notification("/v1/devices", NotificationAction.Post.value, encodedDevice) => handleDeviceAdded(respond, encodedDevice)
-    case Notification(path, NotificationAction.Delete.value, encodedDevice)  if path.startsWith(devicesPath) => handleDeviceRemoved(respond, encodedDevice)
-    case Notification(path, NotificationAction.Put.value, encodedDevice) if path.startsWith(devicesPath) => handleDeviceUpdate(respond, encodedDevice)
+    case Notification(path, NotificationAction.Post.value, encodedDevice) if matchPath(path, GCDevice.devicesPath) => handleDeviceAdded(respond, encodedDevice)
+    case Notification(path, NotificationAction.Delete.value, encodedDevice)  if matchPath(path, GCDevice.devicesPath) => handleDeviceRemoved(respond, encodedDevice)
+    case Notification(path, NotificationAction.Put.value, encodedDevice) if matchPath(path, GCDevice.devicesPath) => handleDeviceUpdate(respond, encodedDevice)
     case _ => throw new IllegalStateException(s"Unexpected notification: $body")
+  }
+
+  private def matchPath(observed: String, expected: String): Boolean = {
+    val expectedPath = Uri.Path(expected)
+    Try(Uri(observed)) match {
+      case Success(uri) => uri.path.startsWith(expectedPath)
+      case Failure(error) => throw new IllegalStateException(s"unexpected observed value: $error")
+    }
   }
 
   private def handleDeviceAdded(respond: NotificationResource.PostNotificationResponse.type, encodedDevice: String): Future[NotificationResource.PostNotificationResponse] = {
     for {
       device <- parseDevice(encodedDevice)
-      _ <- manager.addDevice(device)
+      subscription <- deviceBuilder.subscribeToDevice(device)
+      _ <- addDeviceAndSubscription(device, subscription)
     } yield respond.NoContent
+  }
+
+  private def addDeviceAndSubscription(device: DeviceProperties, subscription: DeviceSubscription): Future[Seq[PowerAssignment]] = {
+    manager.addDevice(device).andThen{ case Success(_) => deviceSubscriptions.put(device.id, subscription)}
   }
 
   private def handleDeviceRemoved(respond: NotificationResource.PostNotificationResponse.type, encodedDevice: String): Future[NotificationResource.PostNotificationResponse] = {
