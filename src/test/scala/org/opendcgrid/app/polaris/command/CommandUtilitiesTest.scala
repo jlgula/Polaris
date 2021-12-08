@@ -20,7 +20,7 @@ class CommandUtilitiesTest extends org.scalatest.funsuite.AnyFunSuite {
 
   test("locateController") {
     val context = new TestCommandContext()
-    val port = PolarisTestUtilities.getUnusedPort
+    val port = CommandUtilities.getUnusedPort
     val controllerResult = ControllerCommand(port).run(context)
     val result = CommandUtilities.locateController(context.deviceManager)
     val uri = Await.result(result, Duration.Inf)
@@ -29,7 +29,7 @@ class CommandUtilitiesTest extends org.scalatest.funsuite.AnyFunSuite {
 
   test("listDevicesOnController") {
     val context = new TestCommandContext()
-    val port = PolarisTestUtilities.getUnusedPort
+    val port = CommandUtilities.getUnusedPort
     val controllerResult = ControllerCommand(port).run(context)
     assert(controllerResult.isSuccess)
     val clientResult = ClientCommand().run(context)

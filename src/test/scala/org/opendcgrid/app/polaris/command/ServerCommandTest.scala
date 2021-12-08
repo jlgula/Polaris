@@ -18,7 +18,7 @@ class ServerCommandTest extends org.scalatest.funsuite.AnyFunSuite {
 
   test("server command") {
     val context = new TestCommandContext()
-    val port = PolarisTestUtilities.getUnusedPort
+    val port = CommandUtilities.getUnusedPort
     val command = ControllerCommand(port)
     val result = command.run(context)
     val gcDescriptor = DeviceDescriptor.GC

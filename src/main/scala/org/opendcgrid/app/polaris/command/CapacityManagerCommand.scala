@@ -4,7 +4,7 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.model.Uri
 import org.opendcgrid.app.polaris.PolarisAppOptionTag
 import org.opendcgrid.app.polaris.command.Command.parseErrors
-import org.opendcgrid.app.polaris.command.CommandUtilities.parsePort
+import org.opendcgrid.app.polaris.command.CommandUtilities.{getUnusedPort, parsePort}
 import org.opendcgrid.app.polaris.device.{DeviceDescriptor, DeviceError}
 import org.opendcgrid.lib.commandoption.CommandOptionResult
 import org.opendcgrid.app.polaris.client.definitions.{Device => DeviceProperties}
@@ -17,7 +17,6 @@ import scala.util.{Failure, Success, Try}
 case object CapacityManagerCommand extends Parsable {
   val name = "capacityManager"
   val help = "capacityManager - start a capacity manager"
-  val defaultPort: Int = 0
 
 
   override def parse(arguments: Seq[String]): Try[Command] = {
@@ -25,12 +24,12 @@ case object CapacityManagerCommand extends Parsable {
     val result = CommandOptionResult.parse(arguments, options)
     for {
       _ <- parseErrors(result) // Bail out if any errors in find
-      port <- parsePort(result, defaultPort)
+      port <- parsePort(result, getUnusedPort)
     } yield CapacityManagerCommand(port)
   }
 }
 
-case class CapacityManagerCommand(port: Int = 0) extends Command {
+case class CapacityManagerCommand(port: Int = getUnusedPort) extends Command {
   val uri: Uri = Uri("http://localhost").withPort(port)
   def run(context: CommandContext): Try[CommandResponse.DeviceResponse] = {
     implicit def actorSystem: ActorSystem = context.actorSystem

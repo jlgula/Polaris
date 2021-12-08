@@ -10,6 +10,7 @@ import org.opendcgrid.app.polaris.client.device.ListDevicesResponse.OK
 import org.opendcgrid.app.polaris.device.{DeviceDescriptor, DeviceManager}
 import org.opendcgrid.lib.commandoption.CommandOptionResult
 
+import java.net.ServerSocket
 import scala.concurrent.{ExecutionContextExecutor, Future}
 import scala.util.{Failure, Success, Try}
 
@@ -101,5 +102,15 @@ object CommandUtilities {
     val name = parts.head
     val pathRemainder = Uri.Path(if (parts.tail.isEmpty) "" else parts.tail.mkString("/", "/", ""))
     CommandUtilities.locateDeviceByName(context, name).map(uri => uri.withPath(uri.path ++ pathRemainder))
+  }
+
+  /**
+   * @return a port on the local host that is not in use
+   */
+  def getUnusedPort: Int = {
+    val socket = new ServerSocket(0)
+    val port = socket.getLocalPort
+    socket.close()
+    port
   }
 }

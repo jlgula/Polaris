@@ -31,8 +31,8 @@ class DevicesCommandTest extends org.scalatest.funsuite.AnyFunSuite {
     val context = new TestCommandContext()
     implicit val ec: ExecutionContext = context.executionContext
     val manager = context.deviceManager
-    val uri1 = Uri("http://localhost").withPort(PolarisTestUtilities.getUnusedPort)
-    val uri2 = Uri("http://localhost").withPort(PolarisTestUtilities.getUnusedPort)
+    val uri1 = Uri("http://localhost").withPort(CommandUtilities.getUnusedPort)
+    val uri2 = Uri("http://localhost").withPort(CommandUtilities.getUnusedPort)
     val properties1 = DeviceProperties("1", "Device1")
     val properties2 = DeviceProperties("2", "Device2")
     val result = for {

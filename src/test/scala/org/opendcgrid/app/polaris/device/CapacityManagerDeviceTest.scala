@@ -5,11 +5,11 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.Uri
 import org.opendcgrid.app.polaris.PolarisTestUtilities
 import org.opendcgrid.app.polaris.client.definitions.{Device => DeviceProperties}
-import org.opendcgrid.app.polaris.command.CommandTestUtilities
-import org.opendcgrid.app.polaris.command.CommandTestUtilities.{GridContext, TestCommandContext}
+import org.opendcgrid.app.polaris.command.CommandTestUtilities.TestCommandContext
+import org.opendcgrid.app.polaris.command.{CommandTestUtilities, CommandUtilities}
 
-import scala.concurrent.{Await, ExecutionContext}
 import scala.concurrent.duration.Duration
+import scala.concurrent.{Await, ExecutionContext}
 
 class CapacityManagerDeviceTest extends org.scalatest.funsuite.AnyFunSuite {
   test("selectName") {
@@ -18,7 +18,7 @@ class CapacityManagerDeviceTest extends org.scalatest.funsuite.AnyFunSuite {
   test("start and terminate") {
     val context = new CommandTestUtilities.GridContext()
     implicit val system: ActorSystem = context.actorSystem
-    val capacityManagerPort: Int = PolarisTestUtilities.getUnusedPort
+    val capacityManagerPort: Int = CommandUtilities.getUnusedPort
     val capacityManagerURI = context.controller.uri.withPort(capacityManagerPort)
     val capacityManagerName = "capacityManager"
     val properties = DeviceProperties("testID", capacityManagerName)
@@ -81,7 +81,7 @@ class CapacityManagerDeviceTest extends org.scalatest.funsuite.AnyFunSuite {
     DeviceProperties(context.deviceManager.selectID(), context.deviceManager.selectName(descriptor), requested, offered)
   }
 
-  def makeURI(): Uri = Uri("http://localhost").withPort(PolarisTestUtilities.getUnusedPort)
+  def makeURI(): Uri = Uri("http://localhost").withPort(CommandUtilities.getUnusedPort)
 }
 
 

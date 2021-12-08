@@ -17,7 +17,7 @@ class GetCommandTest extends org.scalatest.funsuite.AnyFunSuite {
     val context = new TestCommandContext()
 
     // Start a controller so the name parsing won't fail with No Controller.
-    val controllerPort = PolarisTestUtilities.getUnusedPort
+    val controllerPort = CommandUtilities.getUnusedPort
     val controllerCommand = ControllerCommand(controllerPort)
     val controllerResult = controllerCommand.run(context)
     assert(controllerResult.isSuccess)
@@ -51,7 +51,7 @@ class GetCommandTest extends org.scalatest.funsuite.AnyFunSuite {
 
   test("get command with controller") {
     val context = new TestCommandContext()
-    val controllerPort = PolarisTestUtilities.getUnusedPort
+    val controllerPort = CommandUtilities.getUnusedPort
     val controllerCommand = ControllerCommand(controllerPort)
     val controllerResult = controllerCommand.run(context)
     assert(controllerResult.isSuccess)

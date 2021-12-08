@@ -11,6 +11,7 @@ import org.opendcgrid.app.polaris.client.definitions.{Subscription, Device => Cl
 import org.opendcgrid.app.polaris.client.device.DeviceClient
 import org.opendcgrid.app.polaris.client.notification.{NotificationHandler, NotificationResource}
 import org.opendcgrid.app.polaris.client.subscription.SubscriptionClient
+import org.opendcgrid.app.polaris.command.CommandUtilities
 import org.opendcgrid.app.polaris.server.device.DeviceResource
 import org.opendcgrid.app.polaris.server.gc.GcResource
 import org.opendcgrid.app.polaris.server.subscription.SubscriptionResource
@@ -72,8 +73,8 @@ class TestFixture {
   implicit def context: ExecutionContext = actorSystem.dispatcher
   implicit val requester: HttpRequest => Future[HttpResponse] = Http().singleRequest(_)
   private val localHost = Uri("http://localhost")
-  private val gcPort = PolarisTestUtilities.getUnusedPort
-  private val observerPort = PolarisTestUtilities.getUnusedPort
+  private val gcPort = CommandUtilities.getUnusedPort
+  private val observerPort = CommandUtilities.getUnusedPort
   private val gcURL = localHost.withPort(gcPort)
   val testHandler = new TestNotificationHandler
   private val notificationRoutes = NotificationResource.routes(testHandler)

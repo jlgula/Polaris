@@ -16,7 +16,7 @@ class HaltCommandTest extends org.scalatest.funsuite.AnyFunSuite {
 
   test("halt command") {
     val context = new TestCommandContext()
-    val port = PolarisTestUtilities.getUnusedPort
+    val port = CommandUtilities.getUnusedPort
     val serverCommand = ControllerCommand(port)
     val result = for {
       serverResult <- serverCommand.run(context)

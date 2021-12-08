@@ -28,7 +28,7 @@ object CommandTestUtilities {
   }
 
   class GridContext extends TestCommandContext {
-    val controllerPort: Int = PolarisTestUtilities.getUnusedPort
+    val controllerPort: Int = CommandUtilities.getUnusedPort
     val controller: CommandResponse.DeviceResponse = ControllerCommand(controllerPort).run(this).get
     val client: CommandResponse.DeviceResponse = ClientCommand().run(this).get
     val clientPathOnServer: Uri = Await.result(CommandUtilities.locateDeviceByName(this, client.name), Duration.Inf)
@@ -36,7 +36,7 @@ object CommandTestUtilities {
   }
 
   def initializeClientAndServer(context: CommandContext): CommandResponse.DeviceResponse = {
-    val port = PolarisTestUtilities.getUnusedPort
+    val port = CommandUtilities.getUnusedPort
     val controllerResult = ControllerCommand(port).run(context)
     assert(controllerResult.isSuccess)
     val clientResult = ClientCommand().run(context)

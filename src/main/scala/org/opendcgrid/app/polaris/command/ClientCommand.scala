@@ -5,7 +5,7 @@ import akka.http.scaladsl.model.Uri
 import org.opendcgrid.app.polaris.PolarisAppOptionTag
 import org.opendcgrid.app.polaris.client.definitions.{Device => DeviceProperties}
 import org.opendcgrid.app.polaris.command.Command.parseErrors
-import org.opendcgrid.app.polaris.command.CommandUtilities.parsePort
+import org.opendcgrid.app.polaris.command.CommandUtilities.{getUnusedPort, parsePort}
 import org.opendcgrid.app.polaris.device.{DeviceDescriptor, DeviceError}
 import org.opendcgrid.lib.commandoption.CommandOptionResult
 
@@ -17,7 +17,6 @@ import scala.util.{Failure, Success, Try}
 case object ClientCommand extends Parsable {
   val name = "client"
   val help = "client - start a client device"
-  val defaultPort: Int = 0
 
 
   override def parse(arguments: Seq[String]): Try[Command] = {
@@ -25,12 +24,12 @@ case object ClientCommand extends Parsable {
     val result = CommandOptionResult.parse(arguments, options)
     for {
       _ <- parseErrors(result) // Bail out if any errors in find
-      port <- parsePort(result, defaultPort)
+      port <- parsePort(result, getUnusedPort)
     } yield ClientCommand(port)
   }
 }
 
-case class ClientCommand(port: Int = 0) extends Command {
+case class ClientCommand(port: Int = getUnusedPort) extends Command {
   val uri: Uri = Uri("http://localhost").withPort(port)
   def run(context: CommandContext): Try[CommandResponse.DeviceResponse] = {
     implicit def actorSystem: ActorSystem = context.actorSystem

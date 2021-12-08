@@ -10,6 +10,7 @@ import org.opendcgrid.app.polaris.PolarisTestUtilities
 import org.opendcgrid.app.polaris.client.definitions.{Device => ClientDevice}
 import org.opendcgrid.app.polaris.client.device.{AddDeviceResponse, DeleteDeviceResponse, DeviceClient, GetDeviceResponse, GetPowerAcceptedResponse, GetPowerGrantedResponse, ListDevicesResponse, PutDeviceResponse, PutPowerAcceptedResponse, PutPowerGrantedResponse}
 import org.opendcgrid.app.polaris.client.gc.{GcClient, ResetResponse}
+import org.opendcgrid.app.polaris.command.CommandUtilities
 import org.opendcgrid.app.polaris.server.device.DeviceResource
 import org.opendcgrid.app.polaris.server.gc.GcResource
 import org.scalatest.funsuite.AnyFunSuite
@@ -21,7 +22,7 @@ class GCDeviceHandlerTest extends AnyFunSuite with ScalatestRouteTest {
   private val actorSystem = implicitly[ActorSystem]
   val requester: HttpRequest => Future[HttpResponse] = Http().singleRequest(_)
   private val subscriptionHandler = new GCSubscriptionHandler()(actorSystem, requester)
-  private val gcURL = Uri("http://localhost").withPort(PolarisTestUtilities.getUnusedPort)
+  private val gcURL = Uri("http://localhost").withPort(CommandUtilities.getUnusedPort)
   private val deviceHandler = new GCDeviceHandler(gcURL, subscriptionHandler)
   private val deviceRoutes = DeviceResource.routes(deviceHandler)
   private val gcRoutes = GcResource.routes(new GCHandler(deviceHandler, subscriptionHandler))

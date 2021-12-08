@@ -5,7 +5,7 @@ import akka.http.scaladsl.model.Uri
 import org.opendcgrid.app.polaris.PolarisTestUtilities
 import org.opendcgrid.app.polaris.command.CommandTestUtilities.TestCommandContext
 import org.opendcgrid.app.polaris.client.definitions.{Device => DeviceProperties}
-
+import org.opendcgrid.app.polaris.command.CommandUtilities
 
 import java.util.concurrent.Semaphore
 import scala.concurrent.duration.Duration
@@ -25,7 +25,7 @@ class DeviceManagerTest extends org.scalatest.funsuite.AnyFunSuite {
     val context = new TestCommandContext()
     implicit val ec: ExecutionContextExecutor = context.executionContext
     val manager = context.deviceManager
-    val uri1 = Uri("http://localhost").withPort(PolarisTestUtilities.getUnusedPort)
+    val uri1 = Uri("http://localhost").withPort(CommandUtilities.getUnusedPort)
     val properties1 = DeviceProperties("ID1", "name1")
     val result = for {
       binding <- manager.startDevice(DeviceDescriptor.GC, properties1, uri1)
@@ -51,9 +51,9 @@ class DeviceManagerTest extends org.scalatest.funsuite.AnyFunSuite {
     implicit val ec: ExecutionContextExecutor = context.executionContext
     val manager = context.deviceManager
     val properties1 = DeviceProperties("ID1", "name1")
-    val uri1 = Uri("http://localhost").withPort(PolarisTestUtilities.getUnusedPort)
+    val uri1 = Uri("http://localhost").withPort(CommandUtilities.getUnusedPort)
     val properties2 = DeviceProperties("ID2", "name2")
-    val uri2 = Uri("http://localhost").withPort(PolarisTestUtilities.getUnusedPort)
+    val uri2 = Uri("http://localhost").withPort(CommandUtilities.getUnusedPort)
     val result = for {
       _ <- manager.startDevice(DeviceDescriptor.GC, properties1, uri1)
       _ <- manager.startDevice(DeviceDescriptor.GC, properties2, uri2)
