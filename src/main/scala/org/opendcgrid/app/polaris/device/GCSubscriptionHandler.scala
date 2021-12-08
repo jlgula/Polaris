@@ -28,6 +28,8 @@ class GCSubscriptionHandler(implicit system: ActorSystem, requester: HttpRequest
    */
   def notify(notification: Notification): Future[Iterable[Either[Either[Throwable, HttpResponse], PostNotificationResponse]]] = {
     // Find all the subscriptions that match the observed resource.
+    //println(s"subscriptions: ${subscriptions.values}")
+    //println(s"notification: ${notification.observed}")
     val matchingSubscriptions = subscriptions.values.filter(_.observedUrl == notification.observed)
     // Post a notification to all observers and convert the resulting list of futures into a single future of the results.
     // Note that Future.sequence actually runs all the futures in parallel, not in series.

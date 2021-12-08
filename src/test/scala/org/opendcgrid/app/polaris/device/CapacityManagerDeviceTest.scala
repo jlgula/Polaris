@@ -3,7 +3,6 @@ package org.opendcgrid.app.polaris.device
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.Uri
-import org.opendcgrid.app.polaris.PolarisTestUtilities
 import org.opendcgrid.app.polaris.client.definitions.{Device => DeviceProperties}
 import org.opendcgrid.app.polaris.command.CommandTestUtilities.TestCommandContext
 import org.opendcgrid.app.polaris.command.{CommandTestUtilities, CommandUtilities}
@@ -74,6 +73,33 @@ class CapacityManagerDeviceTest extends org.scalatest.funsuite.AnyFunSuite {
     assertResult(powerGranted1)(powerGrantedResult1)
     val powerGrantedResult2 = Await.result(bindings._5.device.getPowerGranted, Duration.Inf)
     assertResult(powerGranted2)(powerGrantedResult2)
+  }
+
+  test("incrementally add power") {
+    val context = new TestCommandContext()
+    implicit val ec: ExecutionContext = context.executionContext
+    val deviceManager = context.deviceManager
+    val powerOffered = PowerValue(30)
+    val startFuture = for {
+      binding1 <- deviceManager.startDevice(DeviceDescriptor.GC, makeProperties(context, DeviceDescriptor.GC), makeURI())
+      binding2 <- deviceManager.startDevice(DeviceDescriptor.CapacityManager, makeProperties(context, DeviceDescriptor.CapacityManager), makeURI(), Some(binding1.uri))
+      binding3 <- deviceManager.startDevice(DeviceDescriptor.Client, makeProperties(context, DeviceDescriptor.Client, Some(powerOffered)), makeURI(), Some(binding1.uri))
+      binding4 <- deviceManager.startDevice(DeviceDescriptor.Client, makeProperties(context, DeviceDescriptor.Client), makeURI(), Some(binding1.uri))
+      binding5 <- deviceManager.startDevice(DeviceDescriptor.Client, makeProperties(context, DeviceDescriptor.Client, None, Some(PowerValue(10))), makeURI(), Some(binding1.uri))
+    } yield (binding1, binding2, binding3, binding4, binding5)
+    val bindings = Await.result(startFuture, Duration.Inf)
+    val powerAcceptedResult = Await.result(bindings._3.device.getPowerAccepted, Duration.Inf)
+    assertResult(PowerValue(10))(powerAcceptedResult)
+    val powerGrantedResult1 = Await.result(bindings._4.device.getPowerGranted, Duration.Inf)
+    assertResult(PowerValue(0))(powerGrantedResult1)
+    val powerGrantedResult2 = Await.result(bindings._5.device.getPowerGranted, Duration.Inf)
+    assertResult(PowerValue(10))(powerGrantedResult2)
+    val target = bindings._4.device
+    Await.result(bindings._4.device.putProperties(target.properties.copy(powerRequested = Some(PowerValue(20)))), Duration.Inf)
+    val powerGrantedResult3 = Await.result(target.getPowerGranted, Duration.Inf)
+    assertResult(PowerValue(20))(powerGrantedResult3)
+    val powerAcceptedResult2 = Await.result(bindings._3.device.getPowerAccepted, Duration.Inf)
+    assertResult(PowerValue(30))(powerAcceptedResult2)
   }
 
 

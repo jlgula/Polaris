@@ -1,12 +1,15 @@
 package org.opendcgrid.app.polaris.device
 
 import akka.http.scaladsl.Http
-import org.opendcgrid.app.polaris.client.definitions.{Notification, Subscription, Device => DeviceProperties}
-import org.opendcgrid.app.polaris.client.device.{DeviceClient, GetPowerAcceptedResponse, GetPowerGrantedResponse}
+import akka.http.scaladsl.model.Uri
+import org.opendcgrid.app.polaris.client.definitions.{Device => DeviceProperties}
+import org.opendcgrid.app.polaris.client.device.{DeviceClient, GetDeviceResponse, GetPowerAcceptedResponse, GetPowerGrantedResponse, PutDeviceResponse, PutPowerAcceptedResponse, PutPowerGrantedResponse}
 
 import scala.concurrent.{ExecutionContext, Future}
 
 trait Device {
+  def uri: Uri
+
   def properties: DeviceProperties
 
   val deviceClient: DeviceClient
@@ -22,6 +25,13 @@ trait Device {
     }
   }
 
+  def putPowerGranted(value: PowerValue)(implicit ec: ExecutionContext): Future[Unit] = {
+    deviceClient.putPowerGranted(properties.id, value).value.flatMap {
+      case Right(PutPowerGrantedResponse.NoContent) => Future.successful(value)
+      case other => Future.failed(DeviceError.UnexpectedResponse(other.toString))
+    }
+  }
+
   def getPowerAccepted(implicit ec: ExecutionContext): Future[PowerValue] = {
     deviceClient.getPowerAccepted(properties.id).value.flatMap {
       case Right(GetPowerAcceptedResponse.OK(value)) => Future.successful(value)
@@ -29,4 +39,24 @@ trait Device {
     }
   }
 
+  def putPowerPowerAccepted(value: PowerValue)(implicit ec: ExecutionContext): Future[Unit] = {
+    deviceClient.putPowerAccepted(properties.id, value).value.flatMap {
+      case Right(PutPowerAcceptedResponse.NoContent) => Future.successful(value)
+      case other => Future.failed(DeviceError.UnexpectedResponse(other.toString))
+    }
+  }
+
+  def getProperties(implicit ec: ExecutionContext): Future[DeviceProperties] = {
+    deviceClient.getDevice(properties.id).value.flatMap {
+      case Right(GetDeviceResponse.OK(value)) => Future.successful(value)
+      case other => Future.failed(DeviceError.UnexpectedResponse(other.toString))
+    }
+  }
+
+  def putProperties(properties: DeviceProperties)(implicit ec: ExecutionContext): Future[Unit] = {
+    deviceClient.putDevice(properties.id, properties).value.flatMap {
+      case Right(PutDeviceResponse.NoContent) => Future.successful(())
+      case other => Future.failed(DeviceError.UnexpectedResponse(other.toString))
+    }
+  }
 }

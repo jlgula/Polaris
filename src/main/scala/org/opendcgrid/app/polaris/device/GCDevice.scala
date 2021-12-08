@@ -16,7 +16,7 @@ import scala.concurrent.{ExecutionContext, Future}
 object GCDevice {
   val devicesPath = "/v1/devices"
 
-  def apply(uri: Uri, properties: DeviceProperties)(implicit actorSystem: ActorSystem): Future[Device] = {
+  def apply(uri: Uri, properties: DeviceProperties)(implicit actorSystem: ActorSystem): Future[GCDevice] = {
     implicit val context: ExecutionContext = actorSystem.dispatcher
     implicit val requester: HttpRequest => Future[HttpResponse] = Http().singleRequest(_)
     val deviceClient = DeviceClient(uri.toString()) // Not used but needed for Device
@@ -26,11 +26,11 @@ object GCDevice {
     val deviceRoutes = DeviceResource.routes(deviceHandler)
     val gcRoutes = GcResource.routes(new GCHandler(deviceHandler, subscriptionHandler))
     val routes = deviceRoutes ~ gcRoutes ~ subscriptionRoutes
-    Http().newServerAt(uri.authority.host.toString(), uri.authority.port).bindFlow(routes).map(binding => new GCDevice(properties, deviceClient, binding))
+    Http().newServerAt(uri.authority.host.toString(), uri.authority.port).bindFlow(routes).map(binding => new GCDevice(uri, properties, deviceClient, binding))
   }
 }
 
-class GCDevice(val properties: DeviceProperties, val deviceClient: DeviceClient, val serverBinding: Http.ServerBinding) extends Device {
+class GCDevice(val uri: Uri, val properties: DeviceProperties, val deviceClient: DeviceClient, val serverBinding: Http.ServerBinding) extends Device {
   override def terminate(): Future[Http.HttpTerminated] = serverBinding.terminate(FiniteDuration(1, "seconds"))
 }
 /*

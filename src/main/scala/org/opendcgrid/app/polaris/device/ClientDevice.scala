@@ -11,6 +11,7 @@ import org.opendcgrid.app.polaris.client.subscription.{AddSubscriptionResponse, 
 import org.opendcgrid.app.polaris.device.ClientDevice.{ClientNotificationReflector, ClientSubscriptions}
 
 import scala.concurrent.duration.FiniteDuration
+import scala.util.{Failure, Success, Try}
 //import akka.http.scaladsl.server.Directives._
 import io.circe._
 import io.circe.parser._
@@ -19,8 +20,10 @@ import org.opendcgrid.app.polaris.client.notification.NotificationResource
 import scala.concurrent.{ExecutionContext, Future}
 
 object ClientDevice {
-  val powerGrantedPath = "/self/device/powerGranted"
-  val powerAcceptedPath = "/self/device/powerAccepted"
+  val powerGrantedSegment = "powerGranted"
+  val powerGrantedPath = s"/self/device/$powerGrantedSegment"
+  val powerAcceptedSegment = "powerAccepted"
+  val powerAcceptedPath = s"/self/device/$powerAcceptedSegment"
   type AddDeviceFutureResponse = Either[Either[Throwable, HttpResponse], AddDeviceResponse]
   type AddSubscriptionFutureResponse = Either[Either[Throwable, HttpResponse], AddSubscriptionResponse]
   type GetPowerGrantedFutureResponse = Either[Either[Throwable, HttpResponse], GetPowerGrantedResponse]
@@ -75,7 +78,7 @@ object ClientDevice {
   }
 
   private def subscribeToPowerGranted(observerURI: Uri, subscriptionClient: SubscriptionClient, gcURI: Uri, deviceID: String)(implicit ec: ExecutionContext): Future[String] = {
-    val subscriptionPath = Uri.Path(s"/devices/$deviceID/powerGranted")
+    val subscriptionPath = Uri.Path(s"${GCDevice.devicesPath}/$deviceID/powerGranted")
     val observedURI = gcURI.withPath(subscriptionPath)
     val observerURIWithPath = observerURI.withPath(Uri.Path(ClientDevice.powerGrantedPath))
     subscriptionClient.addSubscription(Subscription(observedURI.toString(), observerURIWithPath.toString())).value.flatMap {
@@ -85,7 +88,7 @@ object ClientDevice {
   }
 
   private def subscribeToPowerAccepted(observerURI: Uri, subscriptionClient: SubscriptionClient, gcURI: Uri, deviceID: String)(implicit ec: ExecutionContext): Future[String] = {
-    val subscriptionPath = Uri.Path(s"/devices/$deviceID/powerAccepted")
+    val subscriptionPath = Uri.Path(s"${GCDevice.devicesPath}/$deviceID/powerAccepted")
     val observedURI = gcURI.withPath(subscriptionPath)
     val observerURIWithPath = observerURI.withPath(Uri.Path(ClientDevice.powerAcceptedPath))
     subscriptionClient.addSubscription(Subscription(observedURI.toString(), observerURIWithPath.toString())).value.flatMap {
@@ -107,8 +110,8 @@ class ClientDevice(
                     val serverID: String)
                   (implicit actorSystem: ActorSystem) extends Device with NotificationHandler {
   implicit val context: ExecutionContext = actorSystem.dispatcher
-  private var powerGranted: PowerValue = 0
-  private var powerAccepted: PowerValue = 0
+  var powerGranted: PowerValue = 0  // TODO: protect these in actor
+  var powerAccepted: PowerValue = 0
 
   reflector.bind(this)
 
@@ -124,10 +127,16 @@ class ClientDevice(
   }
 
   override def postNotification(respond: NotificationResource.PostNotificationResponse.type)(body: Notification): Future[NotificationResource.PostNotificationResponse] = body match {
-    case Notification(ClientDevice.powerGrantedPath, _, value)  => updatePowerGranted(respond, value)
-    case Notification(ClientDevice.powerAcceptedPath, _, value) => updatePowerAccepted(respond, value)
+    case Notification(path, NotificationAction.Put.value, value) if matchPath(path, ClientDevice.powerGrantedSegment) => updatePowerGranted(respond, value)
+    case Notification(path, NotificationAction.Put.value, value) if matchPath(path, ClientDevice.powerAcceptedSegment) => updatePowerAccepted(respond, value)
     case _ => throw new IllegalStateException(s"Unexpected notification: $body")
   }
+
+  private def matchPath(observedPath: String, expected: String): Boolean = {
+    val expectedPath = serverURI.withPath(Uri.Path(s"${GCDevice.devicesPath}/${properties.id}/$expected")).toString()
+    observedPath == expectedPath
+  }
+
 
   private def updatePowerGranted(respond: NotificationResource.PostNotificationResponse.type, valueAsString: String): Future[NotificationResource.PostNotificationResponse] = {
     //import io.circe.syntax._
@@ -161,13 +170,13 @@ class ClientDevice(
 
 
   private def putPowerGranted(value: PowerValue): Either[DeviceError, Unit] = {
-    //println(s"device: $uri power granted: $value")
+    println(s"device: ${properties.name}@$uri power granted: $value")
     this.powerGranted = value
     Right(())
   }
 
   private def putPowerAccepted(value: PowerValue): Either[DeviceError, Unit] = {
-    //println(s"device: $uri power granted: $value")
+    println(s"device: ${properties.name}@$uri power accepted: $value")
     this.powerAccepted = value
     Right(())
   }

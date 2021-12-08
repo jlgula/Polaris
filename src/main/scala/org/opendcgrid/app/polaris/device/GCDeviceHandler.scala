@@ -27,13 +27,13 @@ class GCDeviceHandler(val uri: Uri, val subscriptionHandler: GCSubscriptionHandl
       devices.put(body.id, body)
       val notificationsFuture = subscriptionHandler.notify(Notification(uri.withPath(Uri.Path(GCDevice.devicesPath)).toString(), NotificationAction.Post.value, body.asJson.toString()))
       notificationsFuture.map{ responses =>
-        validateResponses(responses)
+        validateNotificationsResponses(responses)
         respond.Created(body.id)
       }
     }
   }
 
-  private def validateResponses(responses: Iterable[Either[Either[Throwable, HttpResponse], PostNotificationResponse]]): Unit = {
+  private def validateNotificationsResponses(responses: Iterable[Either[Either[Throwable, HttpResponse], PostNotificationResponse]]): Unit = {
     responses.foreach {
       case Right(PostNotificationResponse.NoContent) => // Succeed
       case other => throw new IllegalStateException(s"Unexpected response: $other") // TODO: fix to normal error - log?
@@ -52,7 +52,7 @@ class GCDeviceHandler(val uri: Uri, val subscriptionHandler: GCSubscriptionHandl
   override def putDevice(respond: DeviceResource.PutDeviceResponse.type)(id: String, body: Device): Future[DeviceResource.PutDeviceResponse] = {
     if (devices.contains(id)) {
       devices.put(id, body)
-      val notificationsFuture = subscriptionHandler.notify(Notification(s"v1/devices/$id", NotificationAction.Post.value, body.asJson.toString()))
+      val notificationsFuture = subscriptionHandler.notify(Notification(s"$uri/v1/devices/$id", NotificationAction.Put.value, body.asJson.toString()))
       notificationsFuture.map(_ => respond.NoContent)
     } else Future.successful(respond.NotFound(PolarisError.NotFound(id).message))
   }
@@ -66,9 +66,12 @@ class GCDeviceHandler(val uri: Uri, val subscriptionHandler: GCSubscriptionHandl
   override def putPowerGranted(respond: DeviceResource.PutPowerGrantedResponse.type)(id: String, body: BigDecimal): Future[DeviceResource.PutPowerGrantedResponse] = {
     if (devices.contains(id)) {
       powerGranted.put(id, body)
-      val notificationResult = subscriptionHandler.notify(Notification(s"$uri/v1/devices/$id/powerGranted", NotificationAction.Post.value, body.asJson.toString()))
-      notificationResult.map(_ => respond.NoContent)(context)
-    } else Future.successful(respond.NotFound(PolarisError.NotFound(id).message))
+      val notificationsFuture = subscriptionHandler.notify(Notification(s"$uri/v1/devices/$id/powerGranted", NotificationAction.Put.value, body.asJson.toString()))
+      notificationsFuture.map{ responses =>
+        validateNotificationsResponses(responses)
+        respond.NoContent
+      }
+    } else throw new IllegalStateException("device not in devices") // Future.successful(respond.NotFound(PolarisError.NotFound(id).message))
   }
 
   override def reset(): Unit = {
@@ -95,8 +98,11 @@ class GCDeviceHandler(val uri: Uri, val subscriptionHandler: GCSubscriptionHandl
   override def putPowerAccepted(respond: DeviceResource.PutPowerAcceptedResponse.type)(id: String, body: BigDecimal): Future[DeviceResource.PutPowerAcceptedResponse] = {
     if (devices.contains(id)) {
       powerAccepted.put(id, body)
-      val notificationResult = subscriptionHandler.notify(Notification(s"$uri/v1/devices/$id/powerAccepted", NotificationAction.Post.value, body.asJson.toString()))
-      notificationResult.map(_ => respond.NoContent)(context)
-    } else Future.successful(respond.NotFound(PolarisError.NotFound(id).message))
+      val notificationsFuture = subscriptionHandler.notify(Notification(s"$uri/v1/devices/$id/powerAccepted", NotificationAction.Put.value, body.asJson.toString()))
+      notificationsFuture.map{ responses =>
+        validateNotificationsResponses(responses)
+        respond.NoContent
+      }
+    } else throw new IllegalStateException("device not in devices") // Future.successful(respond.NotFound(PolarisError.NotFound(id).message))
   }
 }
