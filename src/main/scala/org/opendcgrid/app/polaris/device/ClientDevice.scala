@@ -11,7 +11,6 @@ import org.opendcgrid.app.polaris.client.subscription.{AddSubscriptionResponse, 
 import org.opendcgrid.app.polaris.device.ClientDevice.{ClientNotificationReflector, ClientSubscriptions}
 
 import scala.concurrent.duration.FiniteDuration
-import scala.util.{Failure, Success, Try}
 //import akka.http.scaladsl.server.Directives._
 import io.circe._
 import io.circe.parser._
