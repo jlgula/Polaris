@@ -170,13 +170,13 @@ class ClientDevice(
 
 
   private def putPowerGranted(value: PowerValue): Either[DeviceError, Unit] = {
-    println(s"device: ${properties.name}@$uri power granted: $value")
+    //println(s"device: ${properties.name}@$uri power granted: $value")
     this.powerGranted = value
     Right(())
   }
 
   private def putPowerAccepted(value: PowerValue): Either[DeviceError, Unit] = {
-    println(s"device: ${properties.name}@$uri power accepted: $value")
+    //println(s"device: ${properties.name}@$uri power accepted: $value")
     this.powerAccepted = value
     Right(())
   }

@@ -33,35 +33,29 @@ class ClientDeviceTest extends org.scalatest.funsuite.AnyFunSuite {
     assertResult(updatedProperties.powerOffered)(result.powerOffered)
   }
 
-  test("get/put powerGranted") {
-    // TODO
-  }
-
-  test("get/put powerAccepted") {
-    // TODO
-  }
-
-  test("powerGrantedSubscription") {
+  test("get/put powerGranted with subscription") {
     val context = new DeviceTestContext
     implicit val ec: ExecutionContext = context.executionContext
     val controller = Await.result(context.createController(), Duration.Inf)
     val client = Await.result(context.createClient("test", controller), Duration.Inf)
     val power = PowerValue(10)
     Await.result(client.putPowerGranted(power), Duration.Inf)
+    val getResult = Await.result(client.getPowerGranted, Duration.Inf)
+    assertResult(power)(getResult)
     assertResult(power)(client.powerGranted)
   }
 
-  test("powerAcceptedSubscription") {
+  test("get/put powerAccepted with subscription") {
     val context = new DeviceTestContext
     implicit val ec: ExecutionContext = context.executionContext
     val controller = Await.result(context.createController(), Duration.Inf)
     val client = Await.result(context.createClient("test", controller), Duration.Inf)
     val power = PowerValue(10)
     Await.result(client.putPowerPowerAccepted(power), Duration.Inf)
+    val getResult = Await.result(client.getPowerAccepted, Duration.Inf)
+    assertResult(power)(getResult)
     assertResult(power)(client.powerAccepted)
   }
-
-
 }
 
 
