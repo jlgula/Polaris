@@ -27,7 +27,7 @@ trait Device {
 
   def putPowerGranted(value: PowerValue)(implicit ec: ExecutionContext): Future[Unit] = {
     deviceClient.putPowerGranted(properties.id, value).value.flatMap {
-      case Right(PutPowerGrantedResponse.NoContent) => Future.successful(value)
+      case Right(PutPowerGrantedResponse.NoContent) => Future.successful(())
       case other => Future.failed(DeviceError.UnexpectedResponse(other.toString))
     }
   }
@@ -41,7 +41,7 @@ trait Device {
 
   def putPowerPowerAccepted(value: PowerValue)(implicit ec: ExecutionContext): Future[Unit] = {
     deviceClient.putPowerAccepted(properties.id, value).value.flatMap {
-      case Right(PutPowerAcceptedResponse.NoContent) => Future.successful(value)
+      case Right(PutPowerAcceptedResponse.NoContent) => Future.successful(())
       case other => Future.failed(DeviceError.UnexpectedResponse(other.toString))
     }
   }

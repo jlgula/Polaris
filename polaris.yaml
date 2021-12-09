@@ -35,6 +35,86 @@ paths:
             text/plain:
               schema:
                 type: string
+  /gc/dateTime:
+    get:
+      tags:
+        - GC
+      summary: Gets the current date and time
+      description: |
+        A subscribable value that changes with the current date and time.
+      operationId: getDateTime
+      x-scala-package: gc
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: string
+                format: date-time
+    put:
+      tags:
+        - device
+      summary: Sets the device properties
+      description: |
+        Sets the current date and time
+      operationId: putDateTime
+      x-scala-package: gc
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: string
+              format: date-time
+      responses:
+        "204":
+          description: Update successful. No content returned.
+        "400":
+          description: Invalid request. The content provides additional details.
+          content:
+            text/plain:
+              schema:
+                type: string
+  /gc/powerPrice:
+    get:
+      tags:
+        - GC
+      summary: Gets the current price for power
+      description: |
+        A subscribable value of the price for power in dollars/kWh (arbitrary).
+      operationId: getPrice
+      x-scala-package: gc
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: number
+    put:
+      tags:
+        - device
+      summary: Sets the current price for power
+      description: |
+        Sets the value of the price for power in dollars/kWh (arbitrary).
+      operationId: putPrice
+      x-scala-package: gc
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: number
+      responses:
+        "204":
+          description: Update successful. No content returned.
+        "400":
+          description: Invalid request. The content provides additional details.
+          content:
+            text/plain:
+              schema:
+                type: string
   /devices:
     get:
       tags:
@@ -379,6 +459,10 @@ components:
         powerOffered:
           type: number
           description: the power in watts that the device has available to supply the microgrid
+        powerPrice:
+          type: number
+          description: |
+            The price at which the device is willing to buy or sell power. Can be used as a priority.
     PowerValue:
       description: power in watts accepted, granted or consumed
       type: number

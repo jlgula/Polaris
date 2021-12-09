@@ -8,6 +8,7 @@ import org.opendcgrid.app.polaris.server.device.{DeviceHandler, DeviceResource}
 import org.opendcgrid.app.polaris.server.notification.PostNotificationResponse
 import org.opendcgrid.app.polaris.{PolarisError, PolarisHandler}
 
+import java.time.OffsetDateTime
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -15,7 +16,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class GCDeviceHandler(val uri: Uri, val subscriptionHandler: GCSubscriptionHandler)(implicit system: ActorSystem) extends DeviceHandler with PolarisHandler {
   implicit val context: ExecutionContext = system.dispatcher
   private val devices = mutable.HashMap[String, Device]()
-  private val powerGranted = mutable.HashMap[String, BigDecimal]()
+  private val powerGranted = mutable.HashMap[String, BigDecimal]()  // TODO: convert to actor
   private val powerAccepted = mutable.HashMap[String, BigDecimal]()
 
 
@@ -105,4 +106,11 @@ class GCDeviceHandler(val uri: Uri, val subscriptionHandler: GCSubscriptionHandl
       }
     } else throw new IllegalStateException("device not in devices") // Future.successful(respond.NotFound(PolarisError.NotFound(id).message))
   }
+  /*
+  override def putPrice(respond: DeviceResource.PutPriceResponse.type)(body: BigDecimal): Future[DeviceResource.PutPriceResponse] = {
+    this.powerPrice = body
+    Future.successful(DeviceResource.PutPriceResponse.NoContent)
+  }
+
+   */
 }
