@@ -6,7 +6,7 @@ import org.opendcgrid.app.polaris.server.gc.{GcHandler, GcResource}
 import java.time.OffsetDateTime
 import scala.concurrent.Future
 
-class GCHandler(handlers: PolarisHandler*) extends GcHandler {
+class GCHandler(val subscriptionHandler: GCSubscriptionHandler, handlers: PolarisHandler*) extends GcHandler {
   private var dateTime: OffsetDateTime = OffsetDateTime.now() // TODO: convert to Actor
   private var powerPrice: BigDecimal = BigDecimal(0)
 

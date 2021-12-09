@@ -6,7 +6,6 @@ import akka.http.scaladsl.model.{HttpRequest, HttpResponse, Uri}
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.server.Route
 import akka.stream.Materializer
-import org.opendcgrid.app.polaris.PolarisTestUtilities
 import org.opendcgrid.app.polaris.client.definitions.{Subscription, Device => ClientDevice, Notification => ClientNotification}
 import org.opendcgrid.app.polaris.client.device.DeviceClient
 import org.opendcgrid.app.polaris.client.notification.{NotificationHandler, NotificationResource}
@@ -84,7 +83,7 @@ class TestFixture {
   private val subscriptionRoutes = SubscriptionResource.routes(subscriptionHandler)
   private val deviceHandler = new GCDeviceHandler(gcURL, subscriptionHandler)
   private val deviceRoutes = DeviceResource.routes(deviceHandler)
-  private val gcRoutes = GcResource.routes(new GCHandler(deviceHandler, subscriptionHandler))
+  private val gcRoutes = GcResource.routes(new GCHandler(subscriptionHandler, deviceHandler))
   private val serverRoutes = deviceRoutes ~ gcRoutes ~ subscriptionRoutes
   private val observedURL = gcURL.withPath(Uri.Path("/v1/devices/123/powerGranted"))
   private val observerURL = localHost.withPort(observerPort)

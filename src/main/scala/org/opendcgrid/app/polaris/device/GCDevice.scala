@@ -24,7 +24,7 @@ object GCDevice {
     val subscriptionRoutes = SubscriptionResource.routes(subscriptionHandler)
     val deviceHandler = new GCDeviceHandler(uri, subscriptionHandler)
     val deviceRoutes = DeviceResource.routes(deviceHandler)
-    val gcRoutes = GcResource.routes(new GCHandler(deviceHandler, subscriptionHandler))
+    val gcRoutes = GcResource.routes(new GCHandler(subscriptionHandler, deviceHandler))
     val routes = deviceRoutes ~ gcRoutes ~ subscriptionRoutes
     Http().newServerAt(uri.authority.host.toString(), uri.authority.port).bindFlow(routes).map(binding => new GCDevice(uri, properties, deviceClient, binding))
   }

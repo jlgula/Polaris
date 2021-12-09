@@ -26,6 +26,7 @@ class GCSubscriptionHandler(implicit system: ActorSystem, requester: HttpRequest
    * @param notification a [[Notification]] that contains the observed resource and the new value.
    * @return a [[Future]] that contains all the responses when it completes
    */
+    /*
   def notify(notification: Notification): Future[Iterable[Either[Either[Throwable, HttpResponse], PostNotificationResponse]]] = {
     // Find all the subscriptions that match the observed resource.
     //println(s"subscriptions: ${subscriptions.values}")
@@ -36,6 +37,29 @@ class GCSubscriptionHandler(implicit system: ActorSystem, requester: HttpRequest
     val x = Future.sequence(matchingSubscriptions.map(subscription => clients(subscription.observerUrl).postNotification(notification)).map(_.value))
     x
   }
+
+     */
+    def notify(notification: Notification): Future[Unit] = {
+      // Find all the subscriptions that match the observed resource.
+      //println(s"subscriptions: ${subscriptions.values}")
+      //println(s"notification: ${notification.observed}")
+      val matchingSubscriptions = subscriptions.values.filter(_.observedUrl == notification.observed)
+      // Post a notification to all observers and convert the resulting list of futures into a single future of the results.
+      // Note that Future.sequence actually runs all the futures in parallel, not in series.
+      Future.sequence(matchingSubscriptions.map(subscription => clients(subscription.observerUrl).postNotification(notification)).map(_.value)).map(validateResponses(notification, _))
+    }
+
+  private def validateResponses(notification: Notification, responses: Iterable[Either[Either[Throwable, HttpResponse], PostNotificationResponse]]): Future[Unit] = {
+    Future.sequence(responses.map(validateResponse(notification, _))).map(_ => ())
+  }
+
+  private def validateResponse(notification: Notification, response: Either[Either[Throwable, HttpResponse], PostNotificationResponse]): Future[Unit] = response match {
+    case Right(PostNotificationResponse.NoContent) => Future.successful(())
+    case Right(PostNotificationResponse.BadRequest(details)) => Future.failed(DeviceError.InvalidNotification(notification, details))
+    case Left(Left(error)) => Future.failed(DeviceError.NotificationFailed(notification, error.getMessage))
+    case Left(Right(httpResponse)) => Future.failed(DeviceError.NotificationFailed(notification, httpResponse.toString()))
+  }
+
 
 
   override def addSubscription(respond: SubscriptionResource.AddSubscriptionResponse.type)(body: Subscription): Future[SubscriptionResource.AddSubscriptionResponse] = {

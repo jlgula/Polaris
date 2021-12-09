@@ -1,14 +1,12 @@
 package org.opendcgrid.app.polaris.device
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.model.{HttpResponse, Uri}
+import akka.http.scaladsl.model.Uri
 import io.circe.syntax._
 import org.opendcgrid.app.polaris.server.definitions.{Device, Notification}
 import org.opendcgrid.app.polaris.server.device.{DeviceHandler, DeviceResource}
-import org.opendcgrid.app.polaris.server.notification.PostNotificationResponse
 import org.opendcgrid.app.polaris.{PolarisError, PolarisHandler}
 
-import java.time.OffsetDateTime
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -27,17 +25,7 @@ class GCDeviceHandler(val uri: Uri, val subscriptionHandler: GCSubscriptionHandl
       //system.log.info("device added: {}", body.toString)
       devices.put(body.id, body)
       val notificationsFuture = subscriptionHandler.notify(Notification(uri.withPath(Uri.Path(GCDevice.devicesPath)).toString(), NotificationAction.Post.value, body.asJson.toString()))
-      notificationsFuture.map{ responses =>
-        validateNotificationsResponses(responses)
-        respond.Created(body.id)
-      }
-    }
-  }
-
-  private def validateNotificationsResponses(responses: Iterable[Either[Either[Throwable, HttpResponse], PostNotificationResponse]]): Unit = {
-    responses.foreach {
-      case Right(PostNotificationResponse.NoContent) => // Succeed
-      case other => throw new IllegalStateException(s"Unexpected response: $other") // TODO: fix to normal error - log?
+      notificationsFuture.map(_ => respond.Created(body.id))
     }
   }
 
@@ -68,10 +56,7 @@ class GCDeviceHandler(val uri: Uri, val subscriptionHandler: GCSubscriptionHandl
     if (devices.contains(id)) {
       powerGranted.put(id, body)
       val notificationsFuture = subscriptionHandler.notify(Notification(s"$uri/v1/devices/$id/powerGranted", NotificationAction.Put.value, body.asJson.toString()))
-      notificationsFuture.map{ responses =>
-        validateNotificationsResponses(responses)
-        respond.NoContent
-      }
+      notificationsFuture map(_ => respond.NoContent)
     } else throw new IllegalStateException("device not in devices") // Future.successful(respond.NotFound(PolarisError.NotFound(id).message))
   }
 
@@ -100,10 +85,7 @@ class GCDeviceHandler(val uri: Uri, val subscriptionHandler: GCSubscriptionHandl
     if (devices.contains(id)) {
       powerAccepted.put(id, body)
       val notificationsFuture = subscriptionHandler.notify(Notification(s"$uri/v1/devices/$id/powerAccepted", NotificationAction.Put.value, body.asJson.toString()))
-      notificationsFuture.map{ responses =>
-        validateNotificationsResponses(responses)
-        respond.NoContent
-      }
+      notificationsFuture.map( _ => respond.NoContent)
     } else throw new IllegalStateException("device not in devices") // Future.successful(respond.NotFound(PolarisError.NotFound(id).message))
   }
   /*

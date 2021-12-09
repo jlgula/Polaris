@@ -1,6 +1,7 @@
 package org.opendcgrid.app.polaris.device
 
 import akka.http.scaladsl.model.Uri
+import org.opendcgrid.app.polaris.server.definitions.Notification
 
 sealed abstract class DeviceError(val message: String) extends Throwable(message)
 object DeviceError {
@@ -13,4 +14,6 @@ object DeviceError {
   case class DuplicateUri(uri: Uri) extends DeviceError(s"URI already in use: $uri")
   case class InvalidPowerValue(value: BigDecimal, details: String) extends DeviceError(s"Invalid power value: $value details: $details")
   case class UnexpectedResponse(response: String) extends DeviceError(s"Unexpected response: $response")
+  case class InvalidNotification(notification: Notification, details: String) extends DeviceError(s"Invalid notification: $notification. Details: $details")
+  case class NotificationFailed(notification: Notification, details: String) extends DeviceError(s"Notification failed: $notification. Details: $details")
 }
