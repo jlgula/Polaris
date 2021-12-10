@@ -3,9 +3,14 @@ package org.opendcgrid.app.polaris
 package object device {
   type DeviceID = String
   type PowerValue = BigDecimal
+  type Price = BigDecimal
 
   object PowerValue {
     def apply(value: BigDecimal): PowerValue = value
+  }
+
+  object Price {
+    def apply(value: BigDecimal): Price = value
   }
 
   object DeviceProperties {

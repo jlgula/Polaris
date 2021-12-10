@@ -15,6 +15,8 @@ import scala.concurrent.{ExecutionContext, Future}
 
 object GCDevice {
   val devicesPath = "/v1/devices"
+  val powerPricePath: Uri.Path = Uri.Path("/gc/powerPrice")
+  val dateTimePath: Uri.Path = Uri.Path("/gc/dateTime")
 
   def apply(uri: Uri, properties: DeviceProperties)(implicit actorSystem: ActorSystem): Future[GCDevice] = {
     implicit val context: ExecutionContext = actorSystem.dispatcher

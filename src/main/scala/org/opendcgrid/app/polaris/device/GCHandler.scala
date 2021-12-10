@@ -1,18 +1,26 @@
 package org.opendcgrid.app.polaris.device
 
+import io.circe.syntax.EncoderOps
 import org.opendcgrid.app.polaris.PolarisHandler
+import org.opendcgrid.app.polaris.server.definitions.Notification
 import org.opendcgrid.app.polaris.server.gc.{GcHandler, GcResource}
 
 import java.time.OffsetDateTime
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
-class GCHandler(val subscriptionHandler: GCSubscriptionHandler, handlers: PolarisHandler*) extends GcHandler {
+object GCHandler {
+  val resetResponse = "reset complete"
+  val defaultPrice: Price = Price(0)
+}
+
+class GCHandler(val notifier: Notifier, handlers: PolarisHandler*)(implicit ec: ExecutionContext) extends GcHandler {
   private var dateTime: OffsetDateTime = OffsetDateTime.now() // TODO: convert to Actor
-  private var powerPrice: BigDecimal = BigDecimal(0)
+  private var powerPrice: Price = GCHandler.defaultPrice
 
   override def reset(respond: GcResource.ResetResponse.type)(): Future[GcResource.ResetResponse] = {
+    notifier.reset()
     handlers.foreach(_.reset())
-    Future.successful(respond.Created("reset complete"))
+    Future.successful(respond.Created(GCHandler.resetResponse))
   }
 
   override def getDateTime(respond: GcResource.GetDateTimeResponse.type)(): Future[GcResource.GetDateTimeResponse] = {
@@ -25,11 +33,13 @@ class GCHandler(val subscriptionHandler: GCSubscriptionHandler, handlers: Polari
 
   override def putDateTime(respond: GcResource.PutDateTimeResponse.type)(body: OffsetDateTime): Future[GcResource.PutDateTimeResponse] = {
     dateTime = body
-    Future.successful(GcResource.PutDateTimeResponse.NoContent)
+    val notification = Notification(GCDevice.dateTimePath.toString(), NotificationAction.Put.value, body.asJson.toString())
+    notifier.notify(notification).map(_ => respond.NoContent)
   }
 
   override def putPrice(respond: GcResource.PutPriceResponse.type)(body: BigDecimal): Future[GcResource.PutPriceResponse] = {
     powerPrice = body
-    Future.successful(GcResource.PutPriceResponse.NoContent)
+    val notification = Notification(GCDevice.powerPricePath.toString(), NotificationAction.Put.value, body.asJson.toString())
+    notifier.notify(notification).map(_ => respond.NoContent)
   }
 }

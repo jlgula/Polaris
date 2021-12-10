@@ -14,11 +14,11 @@ import java.util.UUID
 import scala.collection.mutable
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
-class GCSubscriptionHandler(implicit system: ActorSystem, requester: HttpRequest => Future[HttpResponse]) extends SubscriptionHandler with PolarisHandler {
+class GCSubscriptionHandler(implicit system: ActorSystem, requester: HttpRequest => Future[HttpResponse]) extends SubscriptionHandler with PolarisHandler with Notifier {
   //implicit val system: ActorSystem = sys
   implicit val executionContext: ExecutionContextExecutor = system.dispatcher
   //implicit val requester: HttpRequest => Future[HttpResponse] = Http().singleRequest(_)
-  private val subscriptions = mutable.HashMap[String, Subscription]()
+  private val subscriptions = mutable.HashMap[String, Subscription]() // TODO
   private val clients = mutable.HashMap[String, NotificationClient]()
 
   /**
