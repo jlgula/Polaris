@@ -6,6 +6,7 @@ import akka.http.scaladsl.model.{HttpRequest, HttpResponse, Uri}
 import akka.http.scaladsl.server.Directives._
 import org.opendcgrid.app.polaris.client.definitions.{Device => DeviceProperties}
 import org.opendcgrid.app.polaris.client.device.DeviceClient
+import org.opendcgrid.app.polaris.client.gc.GcClient
 import org.opendcgrid.app.polaris.server.device.DeviceResource
 import org.opendcgrid.app.polaris.server.gc.GcResource
 import org.opendcgrid.app.polaris.server.subscription.SubscriptionResource
@@ -15,8 +16,10 @@ import scala.concurrent.{ExecutionContext, Future}
 
 object GCDevice {
   val devicesPath = "/v1/devices"
-  val powerPricePath: Uri.Path = Uri.Path("/gc/powerPrice")
-  val dateTimePath: Uri.Path = Uri.Path("/gc/dateTime")
+  val powerPricePath: Uri.Path = Uri.Path("/v1/gc/powerPrice")
+  val dateTimePath: Uri.Path = Uri.Path("/v1/gc/dateTime")
+  val powerGrantedProperty = "powerGranted" // Used with makeDeviceSubscriptionPath
+  val powerAcceptedProperty = "powerAccepted" // Used with makeDeviceSubscriptionPath
 
   def apply(uri: Uri, properties: DeviceProperties)(implicit actorSystem: ActorSystem): Future[GCDevice] = {
     implicit val context: ExecutionContext = actorSystem.dispatcher
@@ -26,13 +29,31 @@ object GCDevice {
     val subscriptionRoutes = SubscriptionResource.routes(subscriptionHandler)
     val deviceHandler = new GCDeviceHandler(uri, subscriptionHandler)
     val deviceRoutes = DeviceResource.routes(deviceHandler)
-    val gcRoutes = GcResource.routes(new GCHandler(subscriptionHandler, deviceHandler))
+    val gcRoutes = GcResource.routes(new GCHandler(uri, subscriptionHandler, deviceHandler))
     val routes = deviceRoutes ~ gcRoutes ~ subscriptionRoutes
-    Http().newServerAt(uri.authority.host.toString(), uri.authority.port).bindFlow(routes).map(binding => new GCDevice(uri, properties, deviceClient, binding))
+    val gcClient = GcClient(uri.toString())
+    Http().newServerAt(uri.authority.host.toString(), uri.authority.port).bindFlow(routes).map(binding => new GCDevice(uri, properties, deviceClient, gcClient, binding))
+  }
+
+  /**
+   * Creates the observed URI for device properties on the GC.
+   *
+   * @param gcURI  the base [[Uri]] of the GC device
+   * @param deviceID  the [[DeviceID]] of the subscribing device
+   * @param property  the name of the property being observered
+   * @return  the full [[Uri]] of the observed property
+   */
+  def makeDeviceSubscriptionURI(gcURI: Uri, deviceID: DeviceID, property: String): Uri = {
+    gcURI.withPath(Uri.Path(s"$devicesPath/$deviceID/$property"))
   }
 }
 
-class GCDevice(val uri: Uri, val properties: DeviceProperties, val deviceClient: DeviceClient, val serverBinding: Http.ServerBinding) extends Device {
+class GCDevice(
+                val uri: Uri,
+                val properties: DeviceProperties,
+                val deviceClient: DeviceClient,
+                val gcClient: GcClient,
+                val serverBinding: Http.ServerBinding) extends Device {
   override def terminate(): Future[Http.HttpTerminated] = serverBinding.terminate(FiniteDuration(1, "seconds"))
 }
 /*

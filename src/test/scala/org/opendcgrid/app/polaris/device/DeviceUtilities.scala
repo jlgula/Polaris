@@ -12,13 +12,14 @@ object DeviceUtilities {
   class DeviceTestContext {
     implicit val actorSystem: ActorSystem = ActorSystem()
     implicit val executionContext: ExecutionContext = actorSystem.dispatcher
+    val gcURI: Uri = makeURI()
 
     /**
      * Makes a controller for use in testing.
      *
      * @return the [[GCDevice]] created
      */
-    def createController(): Future[GCDevice] = GCDevice.apply(makeURI(), DeviceProperties(UUID.randomUUID().toString, "GC"))
+    def createController(): Future[GCDevice] = GCDevice.apply(gcURI, DeviceProperties(UUID.randomUUID().toString, "GC"))
 
 
     def createClient(name: String, controller: GCDevice, powerRequested: Option[PowerValue] = None, powerOffered: Option[PowerValue] = None): Future[ClientDevice] = {

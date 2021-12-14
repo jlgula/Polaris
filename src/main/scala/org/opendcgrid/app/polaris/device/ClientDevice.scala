@@ -23,6 +23,8 @@ object ClientDevice {
   val powerGrantedPath = s"/self/device/$powerGrantedSegment"
   val powerAcceptedSegment = "powerAccepted"
   val powerAcceptedPath = s"/self/device/$powerAcceptedSegment"
+  val powerPricePath: Uri.Path = Uri.Path("/self/powerPrice")   // observer path for observing the grid price
+
   type AddDeviceFutureResponse = Either[Either[Throwable, HttpResponse], AddDeviceResponse]
   type AddSubscriptionFutureResponse = Either[Either[Throwable, HttpResponse], AddSubscriptionResponse]
   type GetPowerGrantedFutureResponse = Either[Either[Throwable, HttpResponse], GetPowerGrantedResponse]
@@ -41,7 +43,7 @@ object ClientDevice {
    * @param powerGranted  ID of powerGranted
    * @param powerAccepted ID of powerAccepted
    */
-  case class ClientSubscriptions(powerGranted: String, powerAccepted: String)
+  case class ClientSubscriptions(powerGranted: String, powerAccepted: String, gridPrice: String)
 
   def apply(clientURI: Uri, properties: DeviceProperties, serverURI: Uri)(implicit actorSystem: ActorSystem): Future[ClientDevice] = {
     implicit val ec: ExecutionContext = actorSystem.dispatcher
@@ -57,6 +59,7 @@ object ClientDevice {
       deviceID <- mapAddResponse(addResponse) // The ID of the client on the GC
       powerGrantedID <- subscribeToPowerGranted(clientURI, subscriptionClient, serverURI, deviceID)
       powerAcceptedID <- subscribeToPowerAccepted(clientURI, subscriptionClient, serverURI, deviceID)
+      gridPriceID <- subscribe(serverURI.withPath(GCDevice.powerPricePath), clientURI.withPath(ClientDevice.powerPricePath), subscriptionClient)
     } yield new ClientDevice(
       clientURI,
       serverURI,
@@ -65,7 +68,7 @@ object ClientDevice {
       serverBinding,
       deviceClient,
       subscriptionClient,
-      ClientSubscriptions(powerGrantedID, powerAcceptedID),
+      ClientSubscriptions(powerGrantedID, powerAcceptedID, gridPriceID),
       deviceID)
 
   }
@@ -76,24 +79,23 @@ object ClientDevice {
     case other => throw new IllegalStateException(s"unexpected response: $other")
   }
 
-  private def subscribeToPowerGranted(observerURI: Uri, subscriptionClient: SubscriptionClient, gcURI: Uri, deviceID: String)(implicit ec: ExecutionContext): Future[String] = {
-    val subscriptionPath = Uri.Path(s"${GCDevice.devicesPath}/$deviceID/powerGranted")
-    val observedURI = gcURI.withPath(subscriptionPath)
-    val observerURIWithPath = observerURI.withPath(Uri.Path(ClientDevice.powerGrantedPath))
-    subscriptionClient.addSubscription(Subscription(observedURI.toString(), observerURIWithPath.toString())).value.flatMap {
+  private def subscribe(observedURI: Uri, observerURI: Uri, subscriptionClient: SubscriptionClient)(implicit ec: ExecutionContext): Future[String] = {
+    subscriptionClient.addSubscription(Subscription(observedURI.toString(), observerURI.toString())).value.flatMap {
       case Right(AddSubscriptionResponse.Created(id)) => Future.successful(id)
       case other => Future.failed(DeviceError.UnexpectedResponse(other.toString))
     }
   }
 
-  private def subscribeToPowerAccepted(observerURI: Uri, subscriptionClient: SubscriptionClient, gcURI: Uri, deviceID: String)(implicit ec: ExecutionContext): Future[String] = {
-    val subscriptionPath = Uri.Path(s"${GCDevice.devicesPath}/$deviceID/powerAccepted")
-    val observedURI = gcURI.withPath(subscriptionPath)
+  private def subscribeToPowerGranted(observerURI: Uri, subscriptionClient: SubscriptionClient, gcURI: Uri, deviceID: DeviceID)(implicit ec: ExecutionContext): Future[String] = {
+    val observedURI = GCDevice.makeDeviceSubscriptionURI(gcURI, deviceID, GCDevice.powerGrantedProperty)
+    val observerURIWithPath = observerURI.withPath(Uri.Path(ClientDevice.powerGrantedPath))
+    subscribe(observedURI, observerURIWithPath, subscriptionClient)
+  }
+
+  private def subscribeToPowerAccepted(observerURI: Uri, subscriptionClient: SubscriptionClient, gcURI: Uri, deviceID: DeviceID)(implicit ec: ExecutionContext): Future[String] = {
+    val observedURI = GCDevice.makeDeviceSubscriptionURI(gcURI, deviceID, GCDevice.powerAcceptedProperty)
     val observerURIWithPath = observerURI.withPath(Uri.Path(ClientDevice.powerAcceptedPath))
-    subscriptionClient.addSubscription(Subscription(observedURI.toString(), observerURIWithPath.toString())).value.flatMap {
-      case Right(AddSubscriptionResponse.Created(id)) => Future.successful(id)
-      case other => Future.failed(DeviceError.UnexpectedResponse(other.toString))
-    }
+    subscribe(observedURI, observerURIWithPath, subscriptionClient)
   }
 }
 
@@ -109,8 +111,9 @@ class ClientDevice(
                     val serverID: String)
                   (implicit actorSystem: ActorSystem) extends Device with NotificationHandler {
   implicit val context: ExecutionContext = actorSystem.dispatcher
-  var powerGranted: PowerValue = 0  // TODO: protect these in actor
-  var powerAccepted: PowerValue = 0
+  var powerGranted: PowerValue = PowerValue(0)  // TODO: protect these in actor
+  var powerAccepted: PowerValue = PowerValue(0)
+  var powerPrice: Price = Price(0)
 
   reflector.bind(this)
 
@@ -126,8 +129,9 @@ class ClientDevice(
   }
 
   override def postNotification(respond: NotificationResource.PostNotificationResponse.type)(body: Notification): Future[NotificationResource.PostNotificationResponse] = body match {
-    case Notification(path, NotificationAction.Put.value, value) if matchPath(path, ClientDevice.powerGrantedSegment) => updatePowerGranted(respond, value)
-    case Notification(path, NotificationAction.Put.value, value) if matchPath(path, ClientDevice.powerAcceptedSegment) => updatePowerAccepted(respond, value)
+    case Notification(path, NotificationAction.Put.value, value) if matchPath(path, ClientDevice.powerGrantedSegment) => update(respond, value, _.as[PowerValue], putPowerGranted)
+    case Notification(path, NotificationAction.Put.value, value) if matchPath(path, ClientDevice.powerAcceptedSegment) => update(respond, value, _.as[PowerValue], putPowerAccepted)
+    case Notification(path, NotificationAction.Put.value, value) if path == serverURI.withPath(GCDevice.powerPricePath).toString() => update(respond, value, _.as[Price], putGridPrice)
     case _ => throw new IllegalStateException(s"Unexpected notification: $body")
   }
 
@@ -136,15 +140,13 @@ class ClientDevice(
     observedPath == expectedPath
   }
 
-
-  private def updatePowerGranted(respond: NotificationResource.PostNotificationResponse.type, valueAsString: String): Future[NotificationResource.PostNotificationResponse] = {
-    //import io.circe.syntax._
+  private def update[T](respond: NotificationResource.PostNotificationResponse.type, valueAsString: String, decoder: Json => Decoder.Result[T], handler: T => Option[DeviceError]) : Future[NotificationResource.PostNotificationResponse] = {
     parse(valueAsString) match {
       case Right(jsonValue) =>
-        jsonValue.as[PowerValue] match {
-          case Right(value) => putPowerGranted(value) match {
-            case Right(_) => Future.successful(respond.NoContent)
-            case Left(error) => Future.successful(respond.BadRequest(error.getMessage))
+        decoder(jsonValue) match {
+          case Right(value) => handler(value) match {
+            case None => Future.successful(respond.NoContent)
+            case Some(error) => Future.successful(respond.BadRequest(error.getMessage))
           }
           case Left(error) => Future.successful(respond.BadRequest(error.getMessage))
         }
@@ -152,32 +154,23 @@ class ClientDevice(
     }
   }
 
-  private def updatePowerAccepted(respond: NotificationResource.PostNotificationResponse.type, valueAsString: String): Future[NotificationResource.PostNotificationResponse] = {
-    //import io.circe.syntax._
-    parse(valueAsString) match {
-      case Right(jsonValue) =>
-        jsonValue.as[PowerValue] match {
-          case Right(value) => putPowerAccepted(value) match {
-            case Right(_) => Future.successful(respond.NoContent)
-            case Left(error) => Future.successful(respond.BadRequest(error.getMessage))
-          }
-          case Left(error) => Future.successful(respond.BadRequest(error.getMessage))
-        }
-      case Left(ParsingFailure(message, underlying)) => Future.successful(respond.BadRequest(s"Invalid JSON value: $underlying details: $message"))
-    }
-  }
-
-
-  private def putPowerGranted(value: PowerValue): Either[DeviceError, Unit] = {
+  private def putPowerGranted(value: PowerValue): Option[DeviceError] = {
     //println(s"device: ${properties.name}@$uri power granted: $value")
     this.powerGranted = value
-    Right(())
+    None
   }
 
-  private def putPowerAccepted(value: PowerValue): Either[DeviceError, Unit] = {
+  private def putPowerAccepted(value: PowerValue): Option[DeviceError] = {
     //println(s"device: ${properties.name}@$uri power accepted: $value")
     this.powerAccepted = value
-    Right(())
+    None
   }
+
+  private def putGridPrice(value: Price): Option[DeviceError] = {
+    //println(s"device: ${properties.name}@$uri grid price: $value")
+    this.powerPrice = value
+    None
+  }
+
 
 }

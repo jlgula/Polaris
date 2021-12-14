@@ -56,6 +56,16 @@ class ClientDeviceTest extends org.scalatest.funsuite.AnyFunSuite {
     assertResult(power)(getResult)
     assertResult(power)(client.powerAccepted)
   }
+
+  test("gridPrice with subscription") {
+    val context = new DeviceTestContext
+    implicit val ec: ExecutionContext = context.executionContext
+    val controller = Await.result(context.createController(), Duration.Inf)
+    val client = Await.result(context.createClient("test", controller), Duration.Inf)
+    val price = Price(10)
+    Await.result(controller.gcClient.putPrice(price).value, Duration.Inf)
+    assertResult(price)(client.powerPrice)
+  }
 }
 
 

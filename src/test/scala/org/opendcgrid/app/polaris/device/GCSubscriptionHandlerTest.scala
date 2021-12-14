@@ -74,24 +74,24 @@ class TestFixture {
   private val localHost = Uri("http://localhost")
   private val gcPort = CommandUtilities.getUnusedPort
   private val observerPort = CommandUtilities.getUnusedPort
-  private val gcURL = localHost.withPort(gcPort)
+  private val gcURI = localHost.withPort(gcPort)
   val testHandler = new TestNotificationHandler
   private val notificationRoutes = NotificationResource.routes(testHandler)
   val deviceID = "123"
   private val device = ClientDevice(deviceID, "test")
   private val subscriptionHandler = new GCSubscriptionHandler
   private val subscriptionRoutes = SubscriptionResource.routes(subscriptionHandler)
-  private val deviceHandler = new GCDeviceHandler(gcURL, subscriptionHandler)
+  private val deviceHandler = new GCDeviceHandler(gcURI, subscriptionHandler)
   private val deviceRoutes = DeviceResource.routes(deviceHandler)
-  private val gcRoutes = GcResource.routes(new GCHandler(subscriptionHandler, deviceHandler))
+  private val gcRoutes = GcResource.routes(new GCHandler(gcURI, subscriptionHandler, deviceHandler))
   private val serverRoutes = deviceRoutes ~ gcRoutes ~ subscriptionRoutes
-  private val observedURL = gcURL.withPath(Uri.Path("/v1/devices/123/powerGranted"))
+  private val observedURL = gcURI.withPath(Uri.Path("/v1/devices/123/powerGranted"))
   private val observerURL = localHost.withPort(observerPort)
   private val subscription = Subscription(observedURL.toString(),observerURL.toString())
   private val routeFunction: HttpRequest => Future[HttpResponse] = Route.toFunction(serverRoutes)
   private val materializer = Materializer(actorSystem)
-  private val subscriptionClient = SubscriptionClient(gcURL.toString())(routeFunction, context, materializer)
-  val deviceClient: DeviceClient = DeviceClient(gcURL.toString())(routeFunction, context, materializer)
+  private val subscriptionClient = SubscriptionClient(gcURI.toString())(routeFunction, context, materializer)
+  val deviceClient: DeviceClient = DeviceClient(gcURI.toString())(routeFunction, context, materializer)
 
   def start(): Future[Unit] = for {
     _ <- Http().newServerAt(observerURL.authority.host.toString(), observerURL.authority.port).bindFlow(notificationRoutes)

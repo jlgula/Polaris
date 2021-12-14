@@ -21,10 +21,10 @@ class GCDeviceHandlerTest extends AnyFunSuite with ScalatestRouteTest {
   private val actorSystem = implicitly[ActorSystem]
   val requester: HttpRequest => Future[HttpResponse] = Http().singleRequest(_)
   private val subscriptionHandler = new GCSubscriptionHandler()(actorSystem, requester)
-  private val gcURL = Uri("http://localhost").withPort(CommandUtilities.getUnusedPort)
-  private val deviceHandler = new GCDeviceHandler(gcURL, subscriptionHandler)
+  private val gcURI = Uri("http://localhost").withPort(CommandUtilities.getUnusedPort)
+  private val deviceHandler = new GCDeviceHandler(gcURI, subscriptionHandler)
   private val deviceRoutes = DeviceResource.routes(deviceHandler)
-  private val gcRoutes = GcResource.routes(new GCHandler(subscriptionHandler, deviceHandler))
+  private val gcRoutes = GcResource.routes(new GCHandler(gcURI, subscriptionHandler, deviceHandler))
   private val routes = deviceRoutes ~ gcRoutes
 
   implicit val routeFunction: HttpRequest => Future[HttpResponse] = Route.toFunction(routes)

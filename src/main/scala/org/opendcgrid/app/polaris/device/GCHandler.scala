@@ -1,5 +1,6 @@
 package org.opendcgrid.app.polaris.device
 
+import akka.http.scaladsl.model.Uri
 import io.circe.syntax.EncoderOps
 import org.opendcgrid.app.polaris.PolarisHandler
 import org.opendcgrid.app.polaris.server.definitions.Notification
@@ -13,7 +14,7 @@ object GCHandler {
   val defaultPrice: Price = Price(0)
 }
 
-class GCHandler(val notifier: Notifier, handlers: PolarisHandler*)(implicit ec: ExecutionContext) extends GcHandler {
+class GCHandler(val uri: Uri, val notifier: Notifier, handlers: PolarisHandler*)(implicit ec: ExecutionContext) extends GcHandler {
   private var dateTime: OffsetDateTime = OffsetDateTime.now() // TODO: convert to Actor
   private var powerPrice: Price = GCHandler.defaultPrice
 
@@ -33,13 +34,15 @@ class GCHandler(val notifier: Notifier, handlers: PolarisHandler*)(implicit ec: 
 
   override def putDateTime(respond: GcResource.PutDateTimeResponse.type)(body: OffsetDateTime): Future[GcResource.PutDateTimeResponse] = {
     dateTime = body
-    val notification = Notification(GCDevice.dateTimePath.toString(), NotificationAction.Put.value, body.asJson.toString())
+    val notification = Notification(uri.withPath(GCDevice.dateTimePath).toString(), NotificationAction.Put.value, body.asJson.toString())
     notifier.notify(notification).map(_ => respond.NoContent)
   }
 
   override def putPrice(respond: GcResource.PutPriceResponse.type)(body: BigDecimal): Future[GcResource.PutPriceResponse] = {
     powerPrice = body
-    val notification = Notification(GCDevice.powerPricePath.toString(), NotificationAction.Put.value, body.asJson.toString())
+    val notification = Notification(uri.withPath(GCDevice.powerPricePath).toString(), NotificationAction.Put.value, body.asJson.toString())
     notifier.notify(notification).map(_ => respond.NoContent)
   }
+
+
 }
