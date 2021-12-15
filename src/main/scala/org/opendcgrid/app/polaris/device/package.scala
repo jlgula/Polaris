@@ -14,8 +14,8 @@ package object device {
   }
 
   object DeviceProperties {
-    def apply(id: DeviceID, name: String, powerRequested: Option[PowerValue] = None, powerOffered: Option[PowerValue] = None): org.opendcgrid.app.polaris.client.definitions.Device = {
-      org.opendcgrid.app.polaris.client.definitions.Device(id, name, powerRequested, powerOffered)
+    def apply(id: DeviceID, name: String, powerRequested: Option[PowerValue] = None, powerOffered: Option[PowerValue] = None, powerPrice: Option[Price] = None): org.opendcgrid.app.polaris.client.definitions.Device = {
+      org.opendcgrid.app.polaris.client.definitions.Device(id, name, powerRequested, powerOffered, powerPrice)
     }
   }
 }

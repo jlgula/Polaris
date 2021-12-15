@@ -102,7 +102,7 @@ object ClientDevice {
 class ClientDevice(
                     val uri: Uri,
                     val serverURI: Uri,
-                    val properties: DeviceProperties,
+                    val defaultProperties: DeviceProperties,
                     val reflector: ClientNotificationReflector,
                     val serverBinding: Http.ServerBinding,
                     val deviceClient: DeviceClient,
@@ -114,6 +114,7 @@ class ClientDevice(
   var powerGranted: PowerValue = PowerValue(0)  // TODO: protect these in actor
   var powerAccepted: PowerValue = PowerValue(0)
   var powerPrice: Price = Price(0)
+  var properties: DeviceProperties = defaultProperties
 
   reflector.bind(this)
 
@@ -140,36 +141,53 @@ class ClientDevice(
     observedPath == expectedPath
   }
 
-  private def update[T](respond: NotificationResource.PostNotificationResponse.type, valueAsString: String, decoder: Json => Decoder.Result[T], handler: T => Option[DeviceError]) : Future[NotificationResource.PostNotificationResponse] = {
+  private def update[T](respond: NotificationResource.PostNotificationResponse.type, valueAsString: String, decoder: Json => Decoder.Result[T], handler: T => Future[Unit]) : Future[NotificationResource.PostNotificationResponse] = {
     parse(valueAsString) match {
       case Right(jsonValue) =>
         decoder(jsonValue) match {
-          case Right(value) => handler(value) match {
-            case None => Future.successful(respond.NoContent)
-            case Some(error) => Future.successful(respond.BadRequest(error.getMessage))
-          }
+          case Right(value) => for {
+            _ <- handler(value) // Watch for errors in the handler. TODO: let this run asynchronously.
+          } yield respond.NoContent
           case Left(error) => Future.successful(respond.BadRequest(error.getMessage))
         }
       case Left(ParsingFailure(message, underlying)) => Future.successful(respond.BadRequest(s"Invalid JSON value: $underlying details: $message"))
     }
   }
 
-  private def putPowerGranted(value: PowerValue): Option[DeviceError] = {
+  private def putPowerGranted(value: PowerValue): Future[Unit] = {
     //println(s"device: ${properties.name}@$uri power granted: $value")
     this.powerGranted = value
-    None
+    Future.successful(())
   }
 
-  private def putPowerAccepted(value: PowerValue): Option[DeviceError] = {
+  private def putPowerAccepted(value: PowerValue): Future[Unit] = {
     //println(s"device: ${properties.name}@$uri power accepted: $value")
     this.powerAccepted = value
-    None
+    Future.successful(())
   }
 
-  private def putGridPrice(value: Price): Option[DeviceError] = {
+  private def putGridPrice(value: Price): Future[Unit] = {
     //println(s"device: ${properties.name}@$uri grid price: $value")
     this.powerPrice = value
-    None
+    val oldProperties = this.properties
+
+    // If the grid power price is more than we are willing to pay, then stop requesting.
+    this.properties = if (this.powerPrice > properties.powerPrice.getOrElse(Price(0))) {
+      properties.copy(powerRequested = None)
+    } else {
+      properties.copy(powerRequested = defaultProperties.powerRequested)
+    }
+
+    // If the grid power price is less than we are expecting to receive, then stop offering.
+    this.properties = if (this.powerPrice < properties.powerPrice.getOrElse(Price(0))) {
+      properties.copy(powerOffered = None)
+    } else {
+      properties.copy(powerOffered = defaultProperties.powerOffered)
+    }
+
+    if (oldProperties != this.properties) {
+      this.putProperties(this.properties) // Update the GC.
+    } else Future.successful(())
   }
 
 

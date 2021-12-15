@@ -22,8 +22,8 @@ object DeviceUtilities {
     def createController(): Future[GCDevice] = GCDevice.apply(gcURI, DeviceProperties(UUID.randomUUID().toString, "GC"))
 
 
-    def createClient(name: String, controller: GCDevice, powerRequested: Option[PowerValue] = None, powerOffered: Option[PowerValue] = None): Future[ClientDevice] = {
-      ClientDevice.apply(makeURI(), DeviceProperties(UUID.randomUUID().toString, name, powerRequested, powerOffered), controller.uri)
+    def createClient(name: String, controller: GCDevice, powerRequested: Option[PowerValue] = None, powerOffered: Option[PowerValue] = None, powerPrice: Option[Price] = None): Future[ClientDevice] = {
+      ClientDevice.apply(makeURI(), DeviceProperties(UUID.randomUUID().toString, name, powerRequested, powerOffered, powerPrice), controller.uri)
     }
   }
 
