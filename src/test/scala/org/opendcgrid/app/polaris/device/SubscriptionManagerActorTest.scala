@@ -48,7 +48,7 @@ class SubscriptionManagerActorTest extends ScalaTestWithActorTestKit with AnyFun
     val value = "test"
     val notification = NotificationProtocol.Notification(path, action, value)
     val observer = spawn(Observer2())
-    spawn(SubscriptionManagerActor.Notifier(notification, Seq(observer.ref), probe.ref))
+    spawn(NotifierActor(notification, Seq(observer.ref), probe.ref))
     val response = probe.receiveMessage()
     assert(response.isSuccess)
   }

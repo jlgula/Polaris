@@ -32,13 +32,14 @@ object SubscriptionManagerActor {
           this (subscriptions)
         case Notify(notification, replyTo) =>
           val observers = subscriptions.filter(s => s.observed == notification.observed).map(_.observer)
-          context.spawn(Notifier(notification, observers.toSeq, replyTo), "notifier")
+          context.spawn(NotifierActor(notification, observers.toSeq, replyTo), "notifier")
           //observers.foreach { observer => observer ! NotificationProtocol.Notify(notification, replyTo) }
           //replyTo ! StatusReply.Ack
           this (subscriptions)
       }
     }
 
+  /*
   object Notifier {
     def apply(notification: NotificationProtocol.Notification, observers: Seq[ActorRef[NotificationProtocol.Command]], replyTo: ActorRef[StatusReply[Done]]): Behavior[StatusReply[Done]] =
       Behaviors.setup[StatusReply[Done]] { context =>
@@ -69,7 +70,11 @@ object SubscriptionManagerActor {
         handle(observers)
       }
   }
+
+   */
 }
+
+
 
 
 object NotificationProtocol {
