@@ -54,18 +54,7 @@ class PolarisSubscriptionHandlerTest extends AnyFunSuite {
   }
 }
 
-class TestNotificationHandler extends NotificationHandler() {
-  import io.circe.parser.decode
-  val observations = new ConcurrentLinkedQueue[BigDecimal]()
-  override def postNotification(respond: NotificationResource.PostNotificationResponse.type)(body: ClientNotification): Future[NotificationResource.PostNotificationResponse] = {
-    decode[BigDecimal](body.value) match {
-      case Right(bigNum) => observations.add(bigNum)
-      case Left(error) => throw new IllegalStateException(s"postNotification - unexpected result: $error")
-    }
-    //println(s"TestNotificationHandler: $this, $body, $observationSeen")
-    Future.successful(respond.NoContent)
-  }
-}
+
 
 class TestFixture {
   implicit def actorSystem: ActorSystem = ActorSystem()
