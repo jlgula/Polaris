@@ -8,34 +8,37 @@ import akka.pattern.StatusReply
 
 object SubscriptionManagerActor {
   //final case class Notification(observed: Uri.Path, action: NotificationAction, value: String)
-  final case class Subscription(observed: Uri.Path, action: NotificationAction, observer: ActorRef[NotificationProtocol.Command])
+  final case class Subscription(id: String, observed: Uri, action: NotificationAction, observer: Uri, target: ActorRef[NotificationProtocol.Command])
 
   sealed trait Command // extends NotifierActor.Command
-  final case class AddSubscription(subscription: Subscription, replyTo: ActorRef[StatusReply[Done]]) extends Command
-  final case class RemoveSubscription(subscription: Subscription, replyTo: ActorRef[StatusReply[Done]]) extends Command
+  final case class AddSubscription(subscription: Subscription, replyTo: ActorRef[StatusReply[String]]) extends Command
+  final case class RemoveSubscription(id: String, replyTo: ActorRef[StatusReply[Done]]) extends Command
   final case class ListSubscriptions(replyTo: ActorRef[SubscriptionResponse]) extends Command
   final case class Notify(notification: NotificationProtocol.Notification, replyTo: ActorRef[StatusReply[Done]]) extends Command
+  final case object Reset extends Command
 
-  final case class SubscriptionResponse(subscriptions: Set[Subscription])
+  final case class SubscriptionResponse(subscriptions: Iterable[Subscription])
 
-  def apply(subscriptions: Set[Subscription]): Behavior[Command] =
+  def apply(subscriptions: Map[String, Subscription] = Map[String, Subscription]()): Behavior[Command] =
     Behaviors.receive { (context, message) =>
       message match {
         case AddSubscription(subscription, replyTo) =>
+          replyTo ! StatusReply.success(subscription.id)
+          this (subscriptions + (subscription.id -> subscription))
+        case RemoveSubscription(id, replyTo) =>
           replyTo ! StatusReply.Ack
-          this (subscriptions + subscription)
-        case RemoveSubscription(subscription, replyTo) =>
-          replyTo ! StatusReply.Ack
-          this (subscriptions - subscription)
+          this (subscriptions.removed(id))
         case ListSubscriptions(replyTo) =>
-          replyTo ! SubscriptionResponse(subscriptions)
+          replyTo ! SubscriptionResponse(subscriptions.values)
           this (subscriptions)
         case Notify(notification, replyTo) =>
-          val observers = subscriptions.filter(s => s.observed == notification.observed).map(_.observer)
+          val observers = subscriptions.values.filter(s => s.observed.path == notification.observed).map(_.target)
           context.spawn(NotifierActor(notification, observers.toSeq, replyTo), "notifier")
           //observers.foreach { observer => observer ! NotificationProtocol.Notify(notification, replyTo) }
           //replyTo ! StatusReply.Ack
           this (subscriptions)
+        case Reset =>
+          this(Map[String, Subscription]())
       }
     }
 

@@ -4,7 +4,9 @@ import akka.Done
 import akka.actor.typed.scaladsl.{AbstractBehavior, ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.pattern.StatusReply
-import org.opendcgrid.app.polaris.server.definitions.Notification
+import org.opendcgrid.app.polaris.device.DeviceActor.{GetProperties, PropertiesResponse, PutProperties}
+import org.opendcgrid.app.polaris.device.NotificationProtocol.Notification
+import org.opendcgrid.app.polaris.server.definitions.{Notification => ServerNotification}
 import org.opendcgrid.app.polaris.server.notification.{NotificationClient, PostNotificationResponse}
 
 import scala.concurrent.ExecutionContext
@@ -16,6 +18,21 @@ object NotificationAdapterActor {
   final case object TransmissionSuccessful extends Command
   final case class TransmissionFailed(error: DeviceError) extends Command
   def apply(client: NotificationClient): Behavior[Command] = Behaviors.setup[Command](context => new NotificationAdapterActor(context, client))
+
+  /**
+   * Converts the protocol to [[NotificationAdapterActor.Command]] for use in subscription.
+   *
+   * Just forwards the notification to the NotificationAdapterActor
+   * @param actor the [[NotificationAdapterActor]] being wrapped
+   * @return a new actor that performs the conversion
+   */
+  def wrapper(actor: ActorRef[NotificationAdapterActor.Command]): Behavior[NotificationProtocol.Command] = {
+    Behaviors.receiveMessage {
+      case NotificationProtocol.Notify(notification: Notification, replyTo: ActorRef[StatusReply[Done]]) =>
+        actor ! WrappedNotification(notification, replyTo)
+        Behaviors.same
+    }
+  }
 }
 
 /**
@@ -38,7 +55,7 @@ class NotificationAdapterActor(context: ActorContext[NotificationAdapterActor.Co
   override def onMessage(msg: Command): Behavior[Command] = msg match {
     case WrappedNotification(notification, replyTo) =>
       this.replyTo = Some(replyTo)
-      val serializedNotification: Notification = Notification(notification.observed.toString(), notification.action.toString, notification.value)
+      val serializedNotification = ServerNotification(notification.observed.toString(), notification.action.toString, notification.value)
       val futureResult = client.postNotification(serializedNotification).value
       context.pipeToSelf(futureResult) {
         // map the Future value to a message, handled by this actor
